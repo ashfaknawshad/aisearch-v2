@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Search Algorithm Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Brython CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython_stdlib.js"></script>
+    
+    <!-- GIF.js for GIF export -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body class="dark-mode" onload="brython(); lucide.createIcons();">
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🤖 AI Search Algorithm Visualizer</h1>
+            <p>Interactive visualization of 8 classic search algorithms</p>
+            <div class="header-actions">
+                <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">
+                    <i data-lucide="moon"></i>
+                </button>
+                <a href="docs/algorithm-guide.md" target="_blank" class="btn-secondary">
+                    <i data-lucide="book-open"></i> Algorithm Guide
+                </a>
+                <a href="https://github.com/yourusername/ai-search-v2" target="_blank" class="btn-secondary">
+                    <i data-lucide="github"></i> GitHub
+                </a>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Sidebar - Tools & Controls -->
+            <aside class="sidebar-left">
+                <div class="panel">
+                    <h3><i data-lucide="cpu"></i> Algorithm Selection</h3>
+                    <select id="algorithm-select" class="select-input">
+                        <optgroup label="Uninformed Search">
+                            <option value="bfs" selected>Breadth-First Search (BFS)</option>
+                            <option value="dfs">Depth-First Search (DFS)</option>
+                            <option value="dls">Depth-Limited Search (DLS)</option>
+                            <option value="ids">Iterative Deepening Search (IDS)</option>
+                            <option value="ucs">Uniform Cost Search (UCS)</option>
+                            <option value="bidirectional">Bidirectional Search</option>
+                        </optgroup>
+                        <optgroup label="Informed Search">
+                            <option value="greedy">Greedy Best-First Search</option>
+                            <option value="astar">A* Search</option>
+                        </optgroup>
+                    </select>
+                    
+                    <div class="depth-limit-container" style="display: none;">
+                        <label for="depth-limit">Depth Limit:</label>
+                        <input type="number" id="depth-limit" value="5" min="1" max="20" class="input-field">
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="wrench"></i> Graph Building Tools</h3>
+                    <div class="tool-grid">
+                        <button id="tool-add-node" class="btn-tool active" title="Add Node (A)">
+                            <i data-lucide="plus-circle"></i> Add Node
+                        </button>
+                        <button id="tool-add-edge" class="btn-tool" title="Add Edge (E)">
+                            <i data-lucide="git-branch"></i> Add Edge
+                        </button>
+                        <button id="tool-move-node" class="btn-tool" title="Move Node (M)">
+                            <i data-lucide="move"></i> Move Node
+                        </button>
+                        <button id="tool-delete-node" class="btn-tool" title="Delete Node (D)">
+                            <i data-lucide="trash-2"></i> Delete Node
+                        </button>
+                        <button id="tool-delete-edge" class="btn-tool" title="Delete Edge">
+                            <i data-lucide="scissors"></i> Delete Edge
+                        </button>
+                        <button id="tool-set-goal" class="btn-tool" title="Set Goal (G)">
+                            <i data-lucide="target"></i> Set Goal
+                        </button>
+                        <button id="tool-edit-heuristic" class="btn-tool" title="Edit Heuristic (H)">
+                            <i data-lucide="hash"></i> Edit Heuristic
+                        </button>
+                        <button id="tool-edit-weight" class="btn-tool" title="Edit Weight (W)">
+                            <i data-lucide="weight"></i> Edit Weight
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="play"></i> Animation Controls</h3>
+                    <div class="animation-controls">
+                        <button id="btn-start" class="btn-primary btn-full">
+                            <i data-lucide="play"></i> Start Search
+                        </button>
+                        <button id="btn-pause" class="btn-secondary btn-full" disabled>
+                            <i data-lucide="pause"></i> Pause
+                        </button>
+                        <button id="btn-stop" class="btn-danger btn-full" disabled>
+                            <i data-lucide="square"></i> Stop
+                        </button>
+                        
+                        <div class="step-controls">
+                            <button id="btn-step-back" class="btn-step" disabled title="Step Backward (←)">
+                                <i data-lucide="skip-back"></i>
+                            </button>
+                            <button id="btn-step-forward" class="btn-step" disabled title="Step Forward (→)">
+                                <i data-lucide="skip-forward"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="speed-control">
+                            <label for="speed-slider">Speed: <span id="speed-value">5x</span></label>
+                            <input type="range" id="speed-slider" min="1" max="10" value="5" class="slider">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="save"></i> File Operations</h3>
+                    <div class="file-operations">
+                        <button id="btn-save-graph" class="btn-secondary btn-small">
+                            <i data-lucide="save"></i> Save Graph
+                        </button>
+                        <button id="btn-load-graph" class="btn-secondary btn-small">
+                            <i data-lucide="folder-open"></i> Load Graph
+                        </button>
+                        <button id="btn-reset-canvas" class="btn-danger btn-small">
+                            <i data-lucide="refresh-cw"></i> Reset Canvas
+                        </button>
+                        <button id="btn-clear-path" class="btn-secondary btn-small">
+                            <i data-lucide="eraser"></i> Clear Path
+                        </button>
+                    </div>
+                    <input type="file" id="file-input" accept=".json" style="display: none;">
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="download"></i> Export Options</h3>
+                    <div class="export-options">
+                        <button id="btn-export-png" class="btn-secondary btn-small" title="Export as PNG">
+                            <i data-lucide="camera"></i> PNG
+                        </button>
+                        <button id="btn-export-gif" class="btn-secondary btn-small" title="Export Animation as GIF">
+                            <i data-lucide="film"></i> GIF
+                        </button>
+                        <button id="btn-export-pdf" class="btn-secondary btn-small" title="Export Report as PDF">
+                            <i data-lucide="file-text"></i> PDF
+                        </button>
+                        <button id="btn-export-svg" class="btn-secondary btn-small" title="Export as SVG">
+                            <i data-lucide="image"></i> SVG
+                        </button>
+                        <button id="btn-export-json" class="btn-secondary btn-small" title="Export Data as JSON">
+                            <i data-lucide="database"></i> JSON
+                        </button>
+                        <button id="btn-export-csv" class="btn-secondary btn-small" title="Export Metrics as CSV">
+                            <i data-lucide="bar-chart"></i> CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="eye"></i> View Controls</h3>
+                    <div class="view-controls">
+                        <button id="btn-zoom-in" class="btn-icon-sm" title="Zoom In (+)">
+                            <i data-lucide="zoom-in"></i>
+                        </button>
+                        <button id="btn-zoom-out" class="btn-icon-sm" title="Zoom Out (-)">
+                            <i data-lucide="zoom-out"></i>
+                        </button>
+                        <button id="btn-reset-view" class="btn-icon-sm" title="Reset View (R)">
+                            <i data-lucide="maximize-2"></i>
+                        </button>
+                        <button id="btn-toggle-labels" class="btn-icon-sm" title="Toggle Labels (L)" id="heuristic-toggle">
+                            <i data-lucide="tag"></i>
+                        </button>
+                        <button id="btn-toggle-grid" class="btn-icon-sm" title="Toggle Grid">
+                            <i data-lucide="grid"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel keyboard-shortcuts">
+                    <h3>⌨️ Keyboard Shortcuts</h3>
+                    <div class="shortcuts-list">
+                        <div><kbd>A</kbd> Add Node</div>
+                        <div><kbd>E</kbd> Add Edge</div>
+                        <div><kbd>M</kbd> Move Node</div>
+                        <div><kbd>D</kbd> Delete Node</div>
+                        <div><kbd>G</kbd> Set Goal</div>
+                        <div><kbd>H</kbd> Edit Heuristic</div>
+                        <div><kbd>Space</kbd> Start/Pause</div>
+                        <div><kbd>←/→</kbd> Step Back/Forward</div>
+                        <div><kbd>Ctrl+Z</kbd> Undo</div>
+                        <div><kbd>Ctrl+Y</kbd> Redo</div>
+                        <div><kbd>Ctrl+S</kbd> Save</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center - Canvas -->
+            <main class="canvas-container">
+                <canvas id="graph-canvas"></canvas>
+                <div class="canvas-overlay">
+                    <div class="legend">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #ef4444;"></span>
+                            <span>Source</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #10b981;"></span>
+                            <span>Goal</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #8b5cf6;"></span>
+                            <span>Visited</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #f59e0b;"></span>
+                            <span>Path</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar - Data Display -->
+            <aside class="sidebar-right">
+                <div class="panel">
+                    <h3><i data-lucide="activity"></i> Live Data Panel</h3>
+                    <div class="data-display">
+                        <div class="data-row">
+                            <span class="data-label">Fringe (Frontier):</span>
+                            <div id="fringe-list" class="data-value"><span class="array-empty">Empty</span></div>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Visited (Explored):</span>
+                            <div id="visited-list" class="data-value"><span class="array-empty">Empty</span></div>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Traversal Order:</span>
+                            <div id="traversal-list" class="data-value"><span class="array-empty">Empty</span></div>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Path Found:</span>
+                            <div id="path-list" class="data-value"><span class="array-empty">No path found yet</span></div>
+                        </div>
+                        
+                        <div id="informed-search-info" style="display: none;">
+                            <hr>
+                            <div class="data-row">
+                                <span class="data-label">Current Node f(n):</span>
+                                <div id="f-score" class="data-value">g(0) + h(0) = 0</div>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Path Cost So Far:</span>
+                                <div id="path-cost-current" class="data-value">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="target"></i> Search Results</h3>
+                    <div id="search-results" class="search-results">
+                        <p class="status-pending">Ready to start search...</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="info"></i> Algorithm Info</h3>
+                    <div id="algorithm-info" class="algorithm-info">
+                        <h4>Breadth-First Search (BFS)</h4>
+                        <p><strong>Strategy:</strong> Explores nodes level by level using a FIFO queue.</p>
+                        <p><strong>Complete:</strong> Yes</p>
+                        <p><strong>Optimal:</strong> Yes (for unweighted graphs)</p>
+                        <p><strong>Time:</strong> O(V + E)</p>
+                        <p><strong>Space:</strong> O(V)</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="bar-chart-2"></i> Graph Statistics</h3>
+                    <div id="graph-stats" class="graph-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Nodes:</span>
+                            <span id="stat-nodes" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Edges:</span>
+                            <span id="stat-edges" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Degree:</span>
+                            <span id="stat-avg-degree" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Connected:</span>
+                            <span id="stat-connected" class="stat-value">N/A</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i data-lucide="layers"></i> Example Graphs</h3>
+                    <div class="example-graphs">
+                        <button id="example-simple" class="btn-secondary btn-small">
+                            Simple Path
+                        </button>
+                        <button id="example-tree" class="btn-secondary btn-small">
+                            Binary Tree
+                        </button>
+                        <button id="example-grid" class="btn-secondary btn-small">
+                            Grid Graph
+                        </button>
+                        <button id="example-weighted" class="btn-secondary btn-small">
+                            Weighted Graph
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with ❤️ using Brython | 
+               <a href="docs/algorithm-guide.md">Algorithm Guide</a> | 
+               <a href="docs/api-reference.md">API Reference</a> | 
+               <a href="docs/deployment-guide.md">Deployment Guide</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Python scripts -->
+    <script type="text/python" src="Node.py"></script>
+    <script type="text/python" src="PriorityQueue.py"></script>
+    <script type="text/python" src="SearchAgent.py"></script>
+    <script type="text/python" src="main.py"></script>
+
+</body>
+</html>
