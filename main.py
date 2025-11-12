@@ -39,6 +39,13 @@ class GraphVisualizer:
         self.show_labels = True
         self.show_grid = True
         
+        # Algorithm type for conditional rendering
+        self.current_algo_type = 'uninformed'  # Default to uninformed (BFS)
+        
+        # Graph mode (None = not set yet, True = undirected, False = directed)
+        self.graph_is_undirected = None
+        self.pending_node_position = None  # Store position when modal is shown
+        
         # Interaction state
         self.current_tool = 'add-node'
         self.selected_node = None
@@ -266,15 +273,247 @@ class GraphVisualizer:
             self.ctx.stroke()
     
     def draw_node_label(self, node):
-        """Draw node heuristic label with better font"""
-        if node.heuristic > 0:
-            self.ctx.fillStyle = '#6b7280'
-            self.ctx.font = '11px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+        """Draw node heuristic label (only for informed algorithms)"""
+        # Only show heuristic for informed algorithms (A*, Greedy)
+        should_show_heuristic = (
+            node.heuristic > 0 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type == 'informed'
+        )
+        
+        if should_show_heuristic:
+            # Theme-aware text color: white in dark mode, gray in light mode
+            is_dark = 'dark-mode' in document.body.classList
+            text_color = '#ffffff' if is_dark else '#1f2937'
+            
+            self.ctx.fillStyle = text_color
+            self.ctx.font = 'bold 12px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
             self.ctx.textAlign = 'center'
             self.ctx.fillText(f'h={node.heuristic}', node.x, node.y + 8)
     
+    def draw_node_on_context(self, ctx, node):
+        """Draw a node on a specific context (for export)"""
+        colors = {
+            'empty': '#ffffff',
+            'source': '#ef4444',
+            'goal': '#10b981',
+            'visited': '#8b5cf6',
+            'path': '#f59e0b'
+        }
+        
+        radius = 25
+        
+        # Node circle
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, radius, 0, 2 * math.pi)
+        ctx.fillStyle = colors.get(node.state, colors['empty'])
+        ctx.fill()
+        
+        # Node border
+        is_selected = (self.selected_node == node)
+        ctx.strokeStyle = '#3b82f6' if is_selected else '#374151'
+        ctx.lineWidth = 4 if is_selected else 3
+        ctx.stroke()
+        
+        # Node ID
+        ctx.font = 'bold 14px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        text_color = '#111827' if node.state == 'empty' else '#ffffff'
+        ctx.fillStyle = text_color
+        ctx.fillText(str(node.name), node.x, node.y - 6)
+    
+    def draw_node_label_on_context(self, ctx, node):
+        """Draw node heuristic label on a specific context (for export)"""
+        # Only show heuristic for informed algorithms
+        should_show_heuristic = (
+            node.heuristic > 0 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type == 'informed'
+        )
+        
+        if should_show_heuristic:
+            # Theme-aware text color
+            is_dark = 'dark-mode' in document.body.classList
+            text_color = '#ffffff' if is_dark else '#1f2937'
+            
+            ctx.fillStyle = text_color
+            ctx.font = 'bold 12px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            ctx.textAlign = 'center'
+            ctx.fillText(f'h={node.heuristic}', node.x, node.y + 8)
+    
+    def draw_edge_on_context(self, ctx, node1, node2, weight):
+        """Draw an edge on a specific context (for export)"""
+        # For undirected graphs, draw simple line without arrow
+        if self.graph_is_undirected:
+            self.draw_undirected_edge_on_context(ctx, node1, node2, weight)
+            return
+        
+        # For directed graphs: check if there's a reverse edge (bidirectional)
+        has_reverse = node2 in self.nodes.values() and node1 in node2.neighbors
+        
+        # Calculate offset for bidirectional edges
+        offset_x = 0
+        offset_y = 0
+        if has_reverse:
+            dx = node2.x - node1.x
+            dy = node2.y - node1.y
+            length = math.sqrt(dx * dx + dy * dy)
+            if length > 0:
+                offset_x = -dy / length * 10
+                offset_y = dx / length * 10
+        
+        # Draw line with offset
+        ctx.beginPath()
+        ctx.moveTo(node1.x + offset_x, node1.y + offset_y)
+        ctx.lineTo(node2.x + offset_x, node2.y + offset_y)
+        ctx.strokeStyle = '#94a3b8'
+        ctx.lineWidth = 3
+        ctx.stroke()
+        
+        # Draw arrow head with offset
+        angle = math.atan2(node2.y - node1.y, node2.x - node1.x)
+        arrow_length = 12
+        node_radius = 25
+        end_x = node2.x - math.cos(angle) * node_radius + offset_x
+        end_y = node2.y - math.sin(angle) * node_radius + offset_y
+        
+        ctx.beginPath()
+        ctx.moveTo(end_x, end_y)
+        ctx.lineTo(
+            end_x - arrow_length * math.cos(angle - math.pi / 6),
+            end_y - arrow_length * math.sin(angle - math.pi / 6)
+        )
+        ctx.moveTo(end_x, end_y)
+        ctx.lineTo(
+            end_x - arrow_length * math.cos(angle + math.pi / 6),
+            end_y - arrow_length * math.sin(angle + math.pi / 6)
+        )
+        ctx.strokeStyle = '#94a3b8'
+        ctx.lineWidth = 3
+        ctx.stroke()
+        
+        # Draw weight label (only for algorithms that use costs)
+        should_show_weight = (
+            weight != 1 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type in ['informed', 'cost_only']
+        )
+        
+        if should_show_weight:
+            # Apply offset to label position
+            mid_x = (node1.x + node2.x) / 2 + offset_x
+            mid_y = (node1.y + node2.y) / 2 + offset_y
+            
+            ctx.font = 'bold 13px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            
+            # Background
+            text = str(int(weight)) if weight == int(weight) else str(weight)
+            metrics = ctx.measureText(text)
+            text_width = metrics.width
+            padding = 5
+            
+            # Theme-aware colors
+            is_dark = 'dark-mode' in document.body.classList
+            bg_color = '#0a0a0a' if is_dark else '#ffffff'
+            text_color = '#ffffff' if is_dark else '#1f2937'
+            
+            ctx.fillStyle = bg_color
+            ctx.fillRect(
+                mid_x - text_width / 2 - padding,
+                mid_y - 9,
+                text_width + padding * 2,
+                18
+            )
+            
+            # Text with theme-aware color
+            ctx.fillStyle = text_color
+            ctx.fillText(text, mid_x, mid_y)
+    
     def draw_edge(self, node1, node2, weight):
-        """Draw an edge between two nodes with crisp rendering"""
+        """Draw an edge between two nodes (line for undirected, arrow for directed)"""
+        # For undirected graphs, draw simple line without arrow
+        if self.graph_is_undirected:
+            self.draw_undirected_edge(node1, node2, weight)
+            return
+        
+        # For directed graphs: check if there's a reverse edge (bidirectional in directed graph)
+        has_reverse = node2 in self.nodes.values() and node1 in node2.neighbors
+        
+        # Calculate offset for bidirectional edges in directed graphs
+        offset = 0
+        if has_reverse:
+            # Offset perpendicular to the edge direction
+            dx = node2.x - node1.x
+            dy = node2.y - node1.y
+            length = math.sqrt(dx * dx + dy * dy)
+            if length > 0:
+                # Perpendicular vector (normalized and scaled)
+                offset_x = -dy / length * 10  # 10 pixels offset
+                offset_y = dx / length * 10
+            else:
+                offset_x = 0
+                offset_y = 0
+        else:
+            offset_x = 0
+            offset_y = 0
+        
+        # Draw line with offset
+        self.ctx.beginPath()
+        self.ctx.moveTo(node1.x + offset_x, node1.y + offset_y)
+        self.ctx.lineTo(node2.x + offset_x, node2.y + offset_y)
+        self.ctx.strokeStyle = '#94a3b8'
+        self.ctx.lineWidth = 3
+        self.ctx.stroke()
+        
+        # Draw arrow head with offset
+        self.draw_arrow_head(node1, node2, offset_x, offset_y)
+        
+        # Draw weight label (if weight != 1 and algorithm uses costs)
+        # Only show for informed algorithms (A*, Greedy) and cost-based (UCS)
+        should_show_weight = (
+            weight != 1 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type in ['informed', 'cost_only']
+        )
+        
+        if should_show_weight:
+            # Apply offset to label position for bidirectional edges
+            mid_x = (node1.x + node2.x) / 2 + offset_x
+            mid_y = (node1.y + node2.y) / 2 + offset_y
+            
+            # Draw weight with background for readability
+            self.ctx.font = 'bold 13px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            self.ctx.textAlign = 'center'
+            self.ctx.textBaseline = 'middle'
+            
+            # Background
+            text = str(int(weight)) if weight == int(weight) else str(weight)
+            metrics = self.ctx.measureText(text)
+            text_width = metrics.width
+            padding = 5
+            
+            # Theme-aware colors
+            is_dark = 'dark-mode' in document.body.classList
+            bg_color = '#0a0a0a' if is_dark else '#ffffff'
+            text_color = '#ffffff' if is_dark else '#1f2937'  # White in dark mode, dark in light mode
+            
+            self.ctx.fillStyle = bg_color
+            self.ctx.fillRect(
+                mid_x - text_width / 2 - padding,
+                mid_y - 9,
+                text_width + padding * 2,
+                18
+            )
+            
+            # Text with theme-aware color
+            self.ctx.fillStyle = text_color
+            self.ctx.fillText(text, mid_x, mid_y)
+    
+    def draw_undirected_edge(self, node1, node2, weight):
+        """Draw an undirected edge (simple line without arrow)"""
         # Draw line
         self.ctx.beginPath()
         self.ctx.moveTo(node1.x, node1.y)
@@ -283,48 +522,95 @@ class GraphVisualizer:
         self.ctx.lineWidth = 3
         self.ctx.stroke()
         
-        # Draw arrow head
-        self.draw_arrow_head(node1, node2)
+        # Draw weight label if applicable
+        should_show_weight = (
+            weight != 1 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type in ['informed', 'cost_only']
+        )
         
-        # Draw weight label (if weight != 1)
-        if weight != 1:
+        if should_show_weight:
             mid_x = (node1.x + node2.x) / 2
             mid_y = (node1.y + node2.y) / 2
             
-            # Draw weight with background for readability
-            self.ctx.font = '12px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            self.ctx.font = 'bold 13px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
             self.ctx.textAlign = 'center'
             self.ctx.textBaseline = 'middle'
             
-            # Background
-            text = str(weight)
+            text = str(int(weight)) if weight == int(weight) else str(weight)
             metrics = self.ctx.measureText(text)
             text_width = metrics.width
-            padding = 4
+            padding = 5
             
-            # Save fill style
-            bg_color = '#0a0a0a' if 'dark-mode' in document.body.classList else '#ffffff'
+            is_dark = 'dark-mode' in document.body.classList
+            bg_color = '#0a0a0a' if is_dark else '#ffffff'
+            text_color = '#ffffff' if is_dark else '#1f2937'
+            
             self.ctx.fillStyle = bg_color
             self.ctx.fillRect(
                 mid_x - text_width / 2 - padding,
-                mid_y - 8,
+                mid_y - 9,
                 text_width + padding * 2,
-                16
+                18
             )
             
-            # Text
-            self.ctx.fillStyle = '#64748b'
+            self.ctx.fillStyle = text_color
             self.ctx.fillText(text, mid_x, mid_y)
     
-    def draw_arrow_head(self, from_node, to_node):
-        """Draw arrow head on edge"""
+    def draw_undirected_edge_on_context(self, ctx, node1, node2, weight):
+        """Draw an undirected edge on export context (simple line without arrow)"""
+        # Draw line
+        ctx.beginPath()
+        ctx.moveTo(node1.x, node1.y)
+        ctx.lineTo(node2.x, node2.y)
+        ctx.strokeStyle = '#94a3b8'
+        ctx.lineWidth = 3
+        ctx.stroke()
+        
+        # Draw weight label if applicable
+        should_show_weight = (
+            weight != 1 and 
+            hasattr(self, 'current_algo_type') and 
+            self.current_algo_type in ['informed', 'cost_only']
+        )
+        
+        if should_show_weight:
+            mid_x = (node1.x + node2.x) / 2
+            mid_y = (node1.y + node2.y) / 2
+            
+            ctx.font = 'bold 13px Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            
+            text = str(int(weight)) if weight == int(weight) else str(weight)
+            metrics = ctx.measureText(text)
+            text_width = metrics.width
+            padding = 5
+            
+            is_dark = 'dark-mode' in document.body.classList
+            bg_color = '#0a0a0a' if is_dark else '#ffffff'
+            text_color = '#ffffff' if is_dark else '#1f2937'
+            
+            ctx.fillStyle = bg_color
+            ctx.fillRect(
+                mid_x - text_width / 2 - padding,
+                mid_y - 9,
+                text_width + padding * 2,
+                18
+            )
+            
+            ctx.fillStyle = text_color
+            ctx.fillText(text, mid_x, mid_y)
+    
+    def draw_arrow_head(self, from_node, to_node, offset_x=0, offset_y=0):
+        """Draw arrow head on edge with optional offset for bidirectional edges"""
         angle = math.atan2(to_node.y - from_node.y, to_node.x - from_node.x)
         arrow_length = 12
         
-        # Calculate arrow position (at edge of node circle)
+        # Calculate arrow position (at edge of node circle) with offset
         node_radius = 25
-        end_x = to_node.x - math.cos(angle) * node_radius
-        end_y = to_node.y - math.sin(angle) * node_radius
+        end_x = to_node.x - math.cos(angle) * node_radius + offset_x
+        end_y = to_node.y - math.sin(angle) * node_radius + offset_y
         
         # Arrow points
         self.ctx.beginPath()
@@ -344,9 +630,136 @@ class GraphVisualizer:
     
     # ===== Graph Operations =====
     
+    def show_graph_type_modal(self):
+        """Show modal to choose graph type"""
+        modal = document['graph-type-modal']
+        modal.style.display = 'flex'
+        
+        # Reinitialize Lucide icons in modal
+        timer.set_timeout(lambda: self.safe_lucide_init(), 50)
+    
+    def hide_graph_type_modal(self):
+        """Hide graph type modal"""
+        modal = document['graph-type-modal']
+        modal.style.display = 'none'
+    
+    def set_graph_type_directed(self, event=None):
+        """User selected DIRECTED graph type"""
+        self.graph_is_undirected = False
+        self.hide_graph_type_modal()
+        self.update_graph_type_indicator()
+        print('📊 Graph type set to: DIRECTED (edges shown as arrows)')
+        
+        # Now create the first node
+        if self.pending_node_position:
+            x, y = self.pending_node_position
+            self.pending_node_position = None
+            self.add_node(x, y)
+    
+    def set_graph_type_undirected(self, event=None):
+        """User selected UNDIRECTED graph type"""
+        self.graph_is_undirected = True
+        self.hide_graph_type_modal()
+        self.update_graph_type_indicator()
+        print('📊 Graph type set to: UNDIRECTED (edges shown as lines)')
+        
+        # Now create the first node
+        if self.pending_node_position:
+            x, y = self.pending_node_position
+            self.pending_node_position = None
+            self.add_node(x, y)
+    
+    def update_graph_type_indicator(self):
+        """Update the graph type indicator in the control panel"""
+        indicator = document['graph-type-indicator']
+        text_elem = document['graph-type-text']
+        
+        if self.graph_is_undirected is None:
+            indicator.style.display = 'none'
+        else:
+            indicator.style.display = 'block'
+            if self.graph_is_undirected:
+                text_elem.textContent = 'Undirected'
+                indicator.style.background = 'rgba(16, 185, 129, 0.1)'
+                indicator.style.borderColor = 'rgba(16, 185, 129, 0.3)'
+            else:
+                text_elem.textContent = 'Directed'
+                indicator.style.background = 'rgba(59, 130, 246, 0.1)'
+                indicator.style.borderColor = 'rgba(59, 130, 246, 0.3)'
+            
+            # Reinitialize Lucide icons
+            timer.set_timeout(lambda: self.safe_lucide_init(), 50)
+    
     def add_node(self, x, y):
-        """Add a new node at position"""
-        node = Node(self.node_counter, x, y, 0)
+        """Add a new node at position with optional custom name"""
+        # First node: ask if graph is directed or undirected using modal
+        if len(self.nodes) == 0 and self.graph_is_undirected is None:
+            # Store position for later use
+            self.pending_node_position = (x, y)
+            # Show modal and wait for user selection
+            self.show_graph_type_modal()
+            return  # Exit early - modal buttons will call add_node_with_type()
+        
+        # Store position and show node name modal
+        self.pending_node_position = (x, y)
+        self.show_node_name_modal()
+    
+    def is_modal_open(self):
+        """Check if any modal is currently open"""
+        graph_type_modal = document['graph-type-modal']
+        node_name_modal = document['node-name-modal']
+        
+        return (graph_type_modal.style.display == 'flex' or 
+                node_name_modal.style.display == 'flex')
+    
+    def show_node_name_modal(self):
+        """Show modal to enter node name"""
+        modal = document['node-name-modal']
+        input_field = document['node-name-input']
+        
+        # Set default value
+        default_name = str(self.node_counter)
+        input_field.value = default_name
+        
+        # Show modal and focus input
+        modal.style.display = 'flex'
+        timer.set_timeout(lambda: input_field.focus(), 50)
+        timer.set_timeout(lambda: input_field.select(), 100)
+        
+        # Reinitialize Lucide icons
+        timer.set_timeout(lambda: self.safe_lucide_init(), 50)
+    
+    def hide_node_name_modal(self):
+        """Hide node name modal"""
+        modal = document['node-name-modal']
+        modal.style.display = 'none'
+    
+    def create_node_with_name(self, event=None):
+        """Create node with the name from modal"""
+        input_field = document['node-name-input']
+        name = input_field.value.strip()
+        
+        # If empty, use default number
+        if name == '':
+            name = str(self.node_counter)
+        
+        # Check if name already exists
+        for existing_node in self.nodes.values():
+            if str(existing_node.name) == name:
+                alert(f'Node "{name}" already exists! Using default number.')
+                name = str(self.node_counter)
+                break
+        
+        # Get stored position
+        if not self.pending_node_position:
+            self.hide_node_name_modal()
+            return
+        
+        x, y = self.pending_node_position
+        self.pending_node_position = None
+        
+        # Create the node
+        node = Node(name, x, y, 0)
         
         # First node becomes source
         if len(self.nodes) == 0:
@@ -358,6 +771,23 @@ class GraphVisualizer:
         self.save_state()
         self.render()
         self.update_graph_stats()
+        
+        # Hide modal
+        self.hide_node_name_modal()
+    
+    def cancel_node_creation(self, event=None):
+        """Cancel node creation"""
+        self.pending_node_position = None
+        self.hide_node_name_modal()
+    
+    def on_node_name_keypress(self, event):
+        """Handle Enter key in node name input"""
+        if event.key == 'Enter' or event.keyCode == 13:
+            event.preventDefault()
+            self.create_node_with_name()
+        elif event.key == 'Escape' or event.keyCode == 27:
+            event.preventDefault()
+            self.cancel_node_creation()
         
     def delete_node(self, node):
         """Delete a node and its edges"""
@@ -382,17 +812,23 @@ class GraphVisualizer:
         self.update_graph_stats()
     
     def add_edge(self, from_node, to_node, weight=1):
-        """Add edge between two nodes"""
+        """Add edge between two nodes (adds reverse edge if undirected graph)"""
         if from_node and to_node and from_node != to_node:
             from_node.add_neighbor(to_node, weight)
+            # If undirected graph, add reverse edge with same weight
+            if self.graph_is_undirected:
+                to_node.add_neighbor(from_node, weight)
             self.save_state()
             self.render()
             self.update_graph_stats()
     
     def delete_edge(self, from_node, to_node):
-        """Delete edge between two nodes"""
+        """Delete edge between two nodes (deletes reverse edge if undirected graph)"""
         if from_node and to_node:
             from_node.remove_neighbor(to_node)
+            # If undirected graph, also delete reverse edge
+            if self.graph_is_undirected:
+                to_node.remove_neighbor(from_node)
             self.save_state()
             self.render()
             self.update_graph_stats()
@@ -428,9 +864,12 @@ class GraphVisualizer:
             self.render()
     
     def set_edge_weight(self, from_node, to_node, weight):
-        """Set edge weight"""
+        """Set edge weight (updates both directions in undirected graph)"""
         if from_node and to_node and to_node in from_node.neighbors:
             from_node.neighbors[to_node] = float(weight)
+            # If undirected graph, also update reverse edge weight
+            if self.graph_is_undirected and from_node in to_node.neighbors:
+                to_node.neighbors[from_node] = float(weight)
             self.save_state()
             self.render()
     
@@ -451,23 +890,43 @@ class GraphVisualizer:
         return None
     
     def find_edge_at(self, x, y):
-        """Find edge at screen position"""
+        """Find edge at screen position, considering bidirectional edge offsets"""
         world_x, world_y = self.screen_to_world(x, y)
         threshold = 10
         
+        # Track closest edge
+        closest_edge = None
+        closest_dist = float('inf')
+        
         for node in self.nodes.values():
             for neighbor in node.get_neighbors():
-                # Check if point is near line segment
+                # Check if there's a reverse edge (bidirectional)
+                has_reverse = neighbor in self.nodes.values() and node in neighbor.neighbors
+                
+                # Calculate offset for bidirectional edges
+                offset_x = 0
+                offset_y = 0
+                if has_reverse:
+                    dx = neighbor.x - node.x
+                    dy = neighbor.y - node.y
+                    length = math.sqrt(dx * dx + dy * dy)
+                    if length > 0:
+                        offset_x = -dy / length * 10
+                        offset_y = dx / length * 10
+                
+                # Check if point is near the offset line segment
                 dist = self.point_to_line_distance(
                     world_x, world_y,
-                    node.x, node.y,
-                    neighbor.x, neighbor.y
+                    node.x + offset_x, node.y + offset_y,
+                    neighbor.x + offset_x, neighbor.y + offset_y
                 )
                 
-                if dist <= threshold:
-                    return (node, neighbor)
+                # Keep track of closest edge
+                if dist < closest_dist and dist <= threshold:
+                    closest_dist = dist
+                    closest_edge = (node, neighbor)
         
-        return None
+        return closest_edge
     
     def point_to_line_distance(self, px, py, x1, y1, x2, y2):
         """Calculate distance from point to line segment"""
@@ -497,7 +956,7 @@ class GraphVisualizer:
         
         # Tool buttons
         tools = ['add-node', 'add-edge', 'move-node', 'delete-node', 
-                'delete-edge', 'set-goal', 'edit-heuristic', 'edit-weight']
+                'delete-edge', 'set-goal', 'edit-heuristic', 'edit-weight', 'rename-node']
         for tool in tools:
             btn = document[f'tool-{tool}']
             btn.bind('click', lambda e, t=tool: self.select_tool(t))
@@ -538,6 +997,15 @@ class GraphVisualizer:
         # Theme toggle
         document['theme-toggle'].bind('click', self.toggle_theme)
         
+        # Graph type modal buttons
+        document['modal-btn-directed'].bind('click', self.set_graph_type_directed)
+        document['modal-btn-undirected'].bind('click', self.set_graph_type_undirected)
+        
+        # Node name modal buttons
+        document['modal-btn-node-ok'].bind('click', self.create_node_with_name)
+        document['modal-btn-node-cancel'].bind('click', self.cancel_node_creation)
+        document['node-name-input'].bind('keypress', self.on_node_name_keypress)
+        
         # Example graphs
         document['example-simple'].bind('click', lambda e: self.load_example('simple'))
         document['example-tree'].bind('click', lambda e: self.load_example('tree'))
@@ -552,6 +1020,10 @@ class GraphVisualizer:
     
     def on_mouse_down(self, event):
         """Handle mouse down on canvas"""
+        # Ignore if any modal is open
+        if self.is_modal_open():
+            return
+        
         # Track which button was pressed
         self.mouse_down_button = event.button
         self.pan_start_x = event.clientX
@@ -621,6 +1093,23 @@ class GraphVisualizer:
                     except:
                         alert('Invalid number')
         
+        elif self.current_tool == 'rename-node' and node:
+            new_name = window.prompt(f'Enter new name for node {node.name}:', str(node.name))
+            if new_name is not None and new_name.strip() != '':
+                new_name = new_name.strip()
+                # Check if name already exists
+                name_exists = False
+                for existing_node in self.nodes.values():
+                    if existing_node != node and str(existing_node.name) == new_name:
+                        alert(f'Node "{new_name}" already exists!')
+                        name_exists = True
+                        break
+                
+                if not name_exists:
+                    node.name = new_name
+                    self.save_state()
+                    self.render()
+        
         # Start panning on empty space
         if node is None and self.current_tool in ['add-node', 'move-node']:
             self.is_panning = True
@@ -629,6 +1118,10 @@ class GraphVisualizer:
     
     def on_mouse_move(self, event):
         """Handle mouse move on canvas"""
+        # Ignore if any modal is open
+        if self.is_modal_open():
+            return
+        
         x = event.clientX
         y = event.clientY
         
@@ -660,6 +1153,8 @@ class GraphVisualizer:
             if node:
                 if self.current_tool == 'move-node':
                     self.canvas.style.cursor = 'grab'
+                elif self.current_tool in ['rename-node', 'edit-heuristic']:
+                    self.canvas.style.cursor = 'text'
                 else:
                     self.canvas.style.cursor = 'pointer'
             else:
@@ -672,6 +1167,10 @@ class GraphVisualizer:
     
     def on_mouse_up(self, event):
         """Handle mouse up on canvas"""
+        # Ignore if any modal is open
+        if self.is_modal_open():
+            return
+        
         if self.dragging_node:
             self.save_state()
         
@@ -736,6 +1235,10 @@ class GraphVisualizer:
                 self.select_tool('set-goal')
             elif key == 'h':
                 self.select_tool('edit-heuristic')
+            elif key == 'w':
+                self.select_tool('edit-weight')
+            elif key == 'n':
+                self.select_tool('rename-node')
             elif key == ' ':
                 event.preventDefault()
                 if self.is_animating:
@@ -777,42 +1280,104 @@ class GraphVisualizer:
         """Handle algorithm selection change"""
         algo = document['algorithm-select'].value
         
-        # Show/hide depth limit for DLS and IDS
+        # Show/hide depth limit for DLS only (IDS automatically tries increasing depths)
         depth_container = document.select_one('.depth-limit-container')
-        if algo in ['dls', 'ids']:
+        if algo == 'dls':
             depth_container.style.display = 'block'
         else:
             depth_container.style.display = 'none'
         
-        # Algorithm-aware heuristic visibility
-        heuristic_algorithms = ['greedy', 'astar']
-        uninformed_algorithms = ['bfs', 'dfs', 'dls', 'ids']
+        # Algorithm categories
+        informed_algorithms = ['greedy', 'astar']  # Use both heuristic and path cost
+        cost_algorithms = ['ucs']  # Use only path cost (edge weights)
+        uninformed_algorithms = ['bfs', 'dfs', 'dls', 'ids', 'bidirectional']  # Use neither
         
         heuristic_toggle_btn = document['btn-toggle-labels']
         
-        if algo in heuristic_algorithms:
-            # Auto-show heuristics for informed algorithms
+        # Store current algorithm type for rendering decisions
+        self.current_algo_type = None
+        
+        # Get tool buttons
+        edit_heuristic_btn = document['tool-edit-heuristic']
+        edit_weight_btn = document['tool-edit-weight']
+        
+        if algo in informed_algorithms:
+            # Informed search: Show heuristics and enable path cost editing
+            self.current_algo_type = 'informed'
             if not self.show_labels:
                 self.show_labels = True
                 self.render()
-            # Enable toggle button
             heuristic_toggle_btn.disabled = False
             heuristic_toggle_btn.style.opacity = '1'
             heuristic_toggle_btn.title = 'Toggle heuristic values'
-        elif algo in uninformed_algorithms:
-            # Auto-hide heuristics for uninformed algorithms
+            
+            # Enable both editing tools
+            edit_heuristic_btn.disabled = False
+            edit_heuristic_btn.style.opacity = '1'
+            edit_heuristic_btn.title = 'Edit Heuristic (H)'
+            
+            edit_weight_btn.disabled = False
+            edit_weight_btn.style.opacity = '1'
+            edit_weight_btn.title = 'Edit Weight (W)'
+            
+            print(f'ℹ️ {algo.upper()}: Heuristics and path costs are both used')
+            
+        elif algo in cost_algorithms:
+            # UCS: Hide heuristics, show path costs
+            self.current_algo_type = 'cost_only'
             if self.show_labels:
                 self.show_labels = False
                 self.render()
-            # Disable toggle button
             heuristic_toggle_btn.disabled = True
             heuristic_toggle_btn.style.opacity = '0.5'
-            heuristic_toggle_btn.title = 'Heuristics not used by this algorithm'
+            heuristic_toggle_btn.title = 'Heuristics not used by UCS (only path costs matter)'
+            
+            # Disable heuristic editing, enable weight editing
+            edit_heuristic_btn.disabled = True
+            edit_heuristic_btn.style.opacity = '0.5'
+            edit_heuristic_btn.title = 'Heuristics not used by UCS'
+            
+            edit_weight_btn.disabled = False
+            edit_weight_btn.style.opacity = '1'
+            edit_weight_btn.title = 'Edit Weight (W)'
+            
+            print(f'ℹ️ UCS: Only path costs (edge weights) are used')
+            
+        elif algo in uninformed_algorithms:
+            # Uninformed: Hide both heuristics and path costs
+            self.current_algo_type = 'uninformed'
+            if self.show_labels:
+                self.show_labels = False
+                self.render()
+            heuristic_toggle_btn.disabled = True
+            heuristic_toggle_btn.style.opacity = '0.5'
+            heuristic_toggle_btn.title = 'Heuristics and costs not used by this algorithm'
+            
+            # Disable both editing tools
+            edit_heuristic_btn.disabled = True
+            edit_heuristic_btn.style.opacity = '0.5'
+            edit_heuristic_btn.title = 'Heuristics not used by uninformed search'
+            
+            edit_weight_btn.disabled = True
+            edit_weight_btn.style.opacity = '0.5'
+            edit_weight_btn.title = 'Edge weights not used by uninformed search'
+            
+            print(f'ℹ️ {algo.upper()}: Uninformed search - heuristics and costs not used')
         else:
-            # For UCS and bidirectional, enable but don't auto-toggle
-            heuristic_toggle_btn.disabled = False
-            heuristic_toggle_btn.style.opacity = '1'
+            # Default for bidirectional
+            self.current_algo_type = 'uninformed'
+            heuristic_toggle_btn.disabled = True
+            heuristic_toggle_btn.style.opacity = '0.5'
             heuristic_toggle_btn.title = 'Toggle heuristic values'
+            
+            # Disable both editing tools
+            edit_heuristic_btn.disabled = True
+            edit_heuristic_btn.style.opacity = '0.5'
+            edit_heuristic_btn.title = 'Heuristics not used'
+            
+            edit_weight_btn.disabled = True
+            edit_weight_btn.style.opacity = '0.5'
+            edit_weight_btn.title = 'Edge weights not used'
         
         # Update algorithm info
         self.update_algorithm_info(algo)
@@ -821,8 +1386,19 @@ class GraphVisualizer:
         info_panel = document['informed-search-info']
         if algo in ['greedy', 'astar', 'ucs']:
             info_panel.style.display = 'block'
+            
+            # Update f(n) label based on algorithm
+            if algo == 'greedy':
+                document['f-score'].textContent = 'h(0) = 0'
+            else:
+                document['f-score'].textContent = 'g(0) + h(0) = 0'
+            
+            document['path-cost-current'].textContent = '0'
         else:
             info_panel.style.display = 'none'
+        
+        # Re-render to update visible weights/heuristics
+        self.render()
         
         # Re-initialize Lucide icons
         self.safe_lucide_init()
@@ -858,16 +1434,33 @@ class GraphVisualizer:
             alert('Please set a goal node')
             return
         
+        # Get selected algorithm
+        algo = document['algorithm-select'].value
+        
+        # Validate heuristics for informed search algorithms
+        if algo in ['greedy', 'astar']:
+            # Check if any goal node has non-zero heuristic or if any node has heuristic set
+            has_heuristics = False
+            for node in self.nodes.values():
+                if node.heuristic > 0:
+                    has_heuristics = True
+                    break
+            
+            if not has_heuristics:
+                algo_name = 'Greedy Best-First Search' if algo == 'greedy' else 'A* Search'
+                alert(f'{algo_name} requires heuristic values!\n\n'
+                      f'Please use the "Edit Heuristic" tool to set h(n) values for your nodes.\n\n'
+                      f'Heuristic = estimated cost from each node to the goal.')
+                return
+        
         # Clear previous search
         self.stop_search(None)
         self.clear_path(None)
         
-        # Get selected algorithm
-        algo = document['algorithm-select'].value
-        goal = self.goal_nodes[0]  # Use first goal
+        goal = self.goal_nodes[0]  # For backward compatibility with single goal
         
-        # Create search agent
-        self.search_agent = SearchAgent(self.nodes, self.source_node, goal)
+        # Create search agent with all goal nodes
+        self.search_agent = SearchAgent(self.nodes, self.source_node, goal, self.goal_nodes)
         
         # Get generator based on algorithm
         if algo == 'bfs':
@@ -936,7 +1529,19 @@ class GraphVisualizer:
         
         # Update informed search info
         info = state['current_info']
-        document['f-score'].textContent = f"g({info['g']}) + h({info['h']}) = {info['f']}"
+        algo = document['algorithm-select'].value
+        
+        # Display correct formula based on algorithm
+        if algo == 'greedy':
+            # Greedy only uses h(n)
+            document['f-score'].textContent = f"h({info['h']}) = {info['h']}"
+        elif algo == 'astar':
+            # A* uses g(n) + h(n)
+            document['f-score'].textContent = f"g({info['g']}) + h({info['h']}) = {info['f']}"
+        else:
+            # UCS or other cost-based
+            document['f-score'].textContent = f"g({info['g']}) + h({info['h']}) = {info['f']}"
+        
         document['path-cost-current'].textContent = str(info['g'])
         
         # Restore node states
@@ -1066,7 +1671,14 @@ class GraphVisualizer:
         document['visited-list'].innerHTML = '<span class="array-empty">Empty</span>'
         document['traversal-list'].innerHTML = '<span class="array-empty">Empty</span>'
         document['path-list'].innerHTML = '<span class="array-empty">No path found yet</span>'
-        document['f-score'].textContent = 'g(0) + h(0) = 0'
+        
+        # Reset f-score based on current algorithm
+        algo = document['algorithm-select'].value
+        if algo == 'greedy':
+            document['f-score'].textContent = 'h(0) = 0'
+        else:
+            document['f-score'].textContent = 'g(0) + h(0) = 0'
+        
         document['path-cost-current'].textContent = '0'
         
         document['search-results'].innerHTML = '<p class="status-pending">Ready to start search...</p>'
@@ -1095,31 +1707,81 @@ class GraphVisualizer:
     # ===== Export Functions =====
     
     def export_png(self, event):
-        """Export canvas as PNG"""
-        # Create a temporary canvas to capture
-        temp_canvas = html.CANVAS()
-        temp_canvas.width = self.canvas.width
-        temp_canvas.height = self.canvas.height
-        temp_ctx = temp_canvas.getContext('2d')
+        """Export canvas as PNG - direct method like V1"""
+        # Directly export the canvas without any intermediate copying
+        # This is exactly how V1 does it: canvas.toDataURL()
+        data_url = self.canvas.toDataURL('image/png')
+        self.download_file(data_url, f'ai-search-{int(window.Date.now())}.png')
         
-        # Draw white background
-        temp_ctx.fillStyle = '#ffffff'
-        temp_ctx.fillRect(0, 0, temp_canvas.width, temp_canvas.height)
-        
-        # Draw current canvas content
-        temp_ctx.drawImage(self.canvas, 0, 0)
-        
-        # Convert to PNG and download
-        data_url = temp_canvas.toDataURL('image/png')
-        self.download_file(data_url, 'graph.png')
+        print(f'✓ PNG exported: {self.canvas.width}x{self.canvas.height}px')
     
     def export_gif(self, event):
-        """Start GIF recording"""
+        """Start GIF recording - V1 approach with workers"""
         if not self.animation_states:
             alert('Please run a search first')
             return
         
-        alert('GIF export will begin when you start the search animation. The recording will capture the entire algorithm execution.')
+        # Check if gif.js is available
+        if not hasattr(window, 'GIF'):
+            alert('GIF library not loaded. Please check your internet connection and refresh the page.')
+            return
+        
+        # Count frames for better feedback
+        frame_count = len(self.animation_states)
+        alert(f'GIF export will begin.\n\n• {frame_count} frames to capture\n• Animation will replay automatically\n• Please wait for download...')
+        
+        print(f'📐 GIF dimensions: {self.window_width}x{self.window_height}px (canvas buffer: {self.canvas.width}x{self.canvas.height}px, DPI: {self.dpi_scale})')
+        
+        # Initialize GIF encoder with workers (V1 approach)
+        gif_options = window.Object.new()
+        gif_options.workers = 2  # Use workers like V1
+        gif_options.quality = 10
+        gif_options.width = self.window_width
+        gif_options.height = self.window_height
+        gif_options.workerScript = 'gif.worker.js'  # Local worker file to avoid CORS
+        
+        self.gif_encoder = window.GIF.new(gif_options)
+        
+        # Store reference to self for callback
+        visualizer = self
+        
+        # Progress callback
+        def on_gif_progress(progress):
+            print(f'GIF encoding: {int(progress * 100)}%')
+        
+        self.gif_encoder.on('progress', on_gif_progress)
+        
+        # Set up finish callback (gif.js passes blob as first arg)
+        def on_gif_finished(*args):
+            try:
+                blob = args[0]  # First argument is the blob
+                print(f'✅ GIF encoding finished! Blob size: {blob.size} bytes')
+                
+                # Create download link
+                url = window.URL.createObjectURL(blob)
+                visualizer.download_file(url, f'search_animation_{int(window.Date.now())}.gif')
+                
+                # Clean up URL after a short delay
+                def cleanup():
+                    try:
+                        window.URL.revokeObjectURL(url)
+                    except:
+                        pass
+                timer.set_timeout(cleanup, 1000)
+                
+                alert(f'GIF export complete! {len(visualizer.gif_frames)} frames encoded.')
+                visualizer.recording_gif = False
+                visualizer.gif_frames = []
+            except Exception as e:
+                print(f'❌ Error in GIF finished callback: {e}')
+                import traceback
+                traceback.print_exc()
+                alert(f'Error saving GIF: {e}')
+                visualizer.recording_gif = False
+        
+        # Bind the callback
+        self.gif_encoder.on('finished', on_gif_finished)
+        
         self.recording_gif = True
         self.gif_frames = []
         
@@ -1130,18 +1792,60 @@ class GraphVisualizer:
         self.animate_next_step()
     
     def capture_gif_frame(self):
-        """Capture current frame for GIF"""
-        # In real implementation, would use gif.js library
-        # For now, just collect canvas data URLs
-        data_url = self.canvas.toDataURL('image/png')
-        self.gif_frames.append(data_url)
+        """Capture current frame - V1 approach"""
+        if not self.recording_gif or not hasattr(self, 'gif_encoder'):
+            return
+        
+        try:
+            # Calculate delay based on animation speed (1-10)
+            delay = 1050 - (self.animation_speed * 100)
+            
+            # Add current canvas state to GIF (V1 approach)
+            frame_options = window.Object.new()
+            frame_options.copy = True
+            frame_options.delay = delay
+            
+            self.gif_encoder.addFrame(self.canvas, frame_options)
+            self.gif_frames.append(True)  # Track frame count
+            
+            # Log progress
+            frame_num = len(self.gif_frames)
+            total_frames = len(self.animation_states)
+            if frame_num % 5 == 0 or frame_num == total_frames:
+                print(f'✓ Captured frame {frame_num}/{total_frames} ({int(frame_num/total_frames*100)}%)')
+        except Exception as e:
+            print(f'❌ Error capturing frame: {e}')
+            import traceback
+            traceback.print_exc()
     
     def finish_gif_recording(self):
-        """Finish GIF recording and generate file"""
-        self.recording_gif = False
-        alert(f'GIF recording complete! {len(self.gif_frames)} frames captured.')
-        # In real implementation, would use gif.js to create animated GIF
-        # and trigger download
+        """Finish GIF recording and render"""
+        if not self.recording_gif or not hasattr(self, 'gif_encoder'):
+            return
+        
+        # Check if we captured any frames
+        if len(self.gif_frames) == 0:
+            alert('No frames captured for GIF')
+            self.recording_gif = False
+            return
+        
+        print(f'\n🎬 Frame capture complete! Captured {len(self.gif_frames)} frames')
+        
+        # Download all frames as individual PNGs
+        print(f'� Downloading {len(self.gif_frames)} frames...')
+        
+        try:
+            # Render the GIF (V1 approach - will trigger 'finished' callback)
+            self.gif_encoder.render()
+        except Exception as e:
+            print(f'Error rendering GIF: {e}')
+            import traceback
+            traceback.print_exc()
+            alert(f'Error rendering GIF: {e}')
+            self.recording_gif = False
+            return
+        
+
     
     def export_pdf(self, event):
         """Export comprehensive PDF report"""
@@ -1235,10 +1939,11 @@ class GraphVisualizer:
         graph_data = {
             'metadata': {
                 'version': '1.0',
-                'created': str(window.Date().new().toISOString()),
+                'created': str(window.Date.new().toISOString()),
                 'algorithm': document['algorithm-select'].value,
                 'node_count': len(self.nodes),
-                'edge_count': sum(len(node.neighbors) for node in self.nodes.values())
+                'edge_count': sum(len(node.neighbors) for node in self.nodes.values()),
+                'is_undirected': self.graph_is_undirected
             },
             'graph': {
                 'nodes': [node.to_dict() for node in self.nodes.values()],
@@ -1320,18 +2025,33 @@ class GraphVisualizer:
         self.source_node = None
         self.goal_nodes = []
         
+        # Load graph type (directed or undirected)
+        self.graph_is_undirected = data.get('metadata', {}).get('is_undirected', False)
+        mode_text = "UNDIRECTED" if self.graph_is_undirected else "DIRECTED"
+        print(f'📊 Loaded graph type: {mode_text}')
+        self.update_graph_type_indicator()  # Show the indicator
+        
         # Load nodes
         for node_data in data['graph']['nodes']:
             node = Node(node_data['name'], node_data['x'], node_data['y'], node_data['heuristic'])
             node.state = node_data.get('state', 'empty')
             self.nodes[node.name] = node
-            self.node_counter = max(self.node_counter, node.name + 1)
+            
+            # Update node_counter only if node.name is numeric
+            if isinstance(node.name, int):
+                self.node_counter = max(self.node_counter, node.name + 1)
+            elif isinstance(node.name, str) and node.name.isdigit():
+                self.node_counter = max(self.node_counter, int(node.name) + 1)
+            else:
+                # For non-numeric names, just increment counter
+                self.node_counter += 1
         
         # Load edges
         for node_data in data['graph']['nodes']:
             node = self.nodes[node_data['name']]
             for neighbor_name, weight in node_data.get('neighbors', {}).items():
-                neighbor = self.nodes[int(neighbor_name)]
+                # neighbor_name can be string or int, just look it up directly
+                neighbor = self.nodes[neighbor_name]
                 node.add_neighbor(neighbor, weight)
         
         # Set source and goals
@@ -1353,6 +2073,8 @@ class GraphVisualizer:
         self.node_counter = 0
         self.source_node = None
         self.goal_nodes = []
+        self.graph_is_undirected = None  # Reset graph type
+        self.update_graph_type_indicator()  # Hide the indicator
         
         self.clear_path(None)
         self.stop_search(None)

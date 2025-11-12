@@ -33,7 +33,7 @@
                 <a href="docs/algorithm-guide.md" target="_blank" class="btn-secondary">
                     <i data-lucide="book-open"></i> Algorithm Guide
                 </a>
-                <a href="https://github.com/yourusername/ai-search-v2" target="_blank" class="btn-secondary">
+                <a href="https://github.com/ashfaknawshad/aisearch-v2" target="_blank" class="btn-secondary">
                     <i data-lucide="github"></i> GitHub
                 </a>
             </div>
@@ -63,6 +63,14 @@
                         <label for="depth-limit">Depth Limit:</label>
                         <input type="number" id="depth-limit" value="5" min="1" max="20" class="input-field">
                     </div>
+                    
+                    <div id="graph-type-indicator" style="display: none; margin-top: 12px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                            <span>Graph Type: <strong id="graph-type-text">Not Set</strong></span>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="panel">
@@ -91,6 +99,9 @@
                         </button>
                         <button id="tool-edit-weight" class="btn-tool" title="Edit Weight (W)">
                             <i data-lucide="weight"></i> Edit Weight
+                        </button>
+                        <button id="tool-rename-node" class="btn-tool" title="Rename Node (N)">
+                            <i data-lucide="type"></i> Rename Node
                         </button>
                     </div>
                 </div>
@@ -237,11 +248,11 @@
                     <h3><i data-lucide="activity"></i> Live Data Panel</h3>
                     <div class="data-display">
                         <div class="data-row">
-                            <span class="data-label">Fringe (Frontier):</span>
+                            <span class="data-label">OPEN LIST (Frontier):</span>
                             <div id="fringe-list" class="data-value"><span class="array-empty">Empty</span></div>
                         </div>
                         <div class="data-row">
-                            <span class="data-label">Visited (Explored):</span>
+                            <span class="data-label">CLOSE LIST (Explored):</span>
                             <div id="visited-list" class="data-value"><span class="array-empty">Empty</span></div>
                         </div>
                         <div class="data-row">
@@ -336,6 +347,53 @@
                <a href="docs/deployment-guide.md">Deployment Guide</a>
             </p>
         </footer>
+    </div>
+
+    <!-- Graph Type Modal -->
+    <div id="graph-type-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 420px;">
+            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="help-circle" style="width: 24px; height: 24px;"></i>
+                Choose Graph Type
+            </h2>
+            <p style="margin: 16px 0 24px 0; line-height: 1.6; color: var(--text-secondary);">
+                Please select the type of graph you want to create. This choice cannot be changed later for this graph.
+            </p>
+            <div style="display: flex; gap: 12px;">
+                <button id="modal-btn-directed" class="btn-primary" style="flex: 1; padding: 12px 24px;">
+                    <i data-lucide="arrow-right-circle"></i> Directed
+                </button>
+                <button id="modal-btn-undirected" class="btn-secondary" style="flex: 1; padding: 12px 24px;">
+                    <i data-lucide="minus-circle"></i> Undirected
+                </button>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
+                <strong>Directed:</strong> Edges have direction (arrows)<br>
+                <strong>Undirected:</strong> Edges work both ways (lines)
+            </div>
+        </div>
+    </div>
+
+    <!-- Node Name Modal -->
+    <div id="node-name-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="edit-3" style="width: 24px; height: 24px;"></i>
+                Name Your Node
+            </h2>
+            <p style="margin: 16px 0 12px 0; line-height: 1.6; color: var(--text-secondary);">
+                Enter a name for this node (letters or numbers):
+            </p>
+            <input type="text" id="node-name-input" class="input-field" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 16px;" placeholder="e.g., A, B, Start, 1, 2, etc.">
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button id="modal-btn-node-cancel" class="btn-secondary" style="padding: 10px 20px;">
+                    <i data-lucide="x"></i> Cancel
+                </button>
+                <button id="modal-btn-node-ok" class="btn-primary" style="padding: 10px 20px;">
+                    <i data-lucide="check"></i> Create Node
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Python scripts -->

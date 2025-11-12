@@ -22,18 +22,20 @@ class SearchAgent:
     Manages visualization state through fringe_list, visited_list, and traversal_array
     """
     
-    def __init__(self, graph, source, goal=None):
+    def __init__(self, graph, source, goal=None, goal_nodes=None):
         """
         Initialize search agent
         
         Args:
             graph (dict): Dictionary mapping node names to Node objects
             source (Node): Starting node
-            goal (Node): Goal node (can be None for some searches)
+            goal (Node): Goal node (for backward compatibility, can be None)
+            goal_nodes (list): List of goal nodes (supports multiple goals)
         """
         self.graph = graph
         self.source = source
         self.goal = goal
+        self.goal_nodes = goal_nodes if goal_nodes else ([goal] if goal else [])
         
         # Visualization state
         self.fringe_list = []      # Nodes waiting to be explored
@@ -65,7 +67,7 @@ class SearchAgent:
         
         # Reset all node states except source and goal
         for node in self.graph.values():
-            if node.state not in ['source', 'goal']:
+            if node and node.state not in ['source', 'goal']:
                 node.state = 'empty'
             node.parent = None
             node.cost = 0
@@ -93,6 +95,45 @@ class SearchAgent:
         path.reverse()
         self.path_cost = cost
         return path
+    
+    def is_goal(self, node):
+        """
+        Check if a node is a goal node
+        
+        Args:
+            node (Node): Node to check
+            
+        Returns:
+            bool: True if node is in goal_nodes list
+        """
+        return node in self.goal_nodes
+    
+    def get_node_by_name(self, node_name):
+        """
+        Get a node from the graph by its name property
+        
+        Args:
+            node_name: The name to search for (can be string or int)
+            
+        Returns:
+            Node: The node with matching name, or None if not found
+        """
+        for node in self.graph.values():
+            if str(node.name) == str(node_name):
+                return node
+        return None
+    
+    def get_sorted_neighbors(self, node):
+        """
+        Get neighbors sorted by X-coordinate (left to right) for visual determinism
+        
+        Args:
+            node (Node): Node whose neighbors to retrieve
+            
+        Returns:
+            list: Sorted list of neighbor nodes (left to right by x position, then by y if tied)
+        """
+        return sorted(node.get_neighbors(), key=lambda n: (n.x, n.y))
     
     def breadth_first_search(self):
         """
@@ -140,19 +181,19 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 # Mark path nodes
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors
-            for neighbor in current.get_neighbors():
+            # Expand neighbors (sorted for deterministic behavior)
+            for neighbor in self.get_sorted_neighbors(current):
                 if neighbor not in visited and neighbor not in frontier:
                     neighbor.parent = current
                     frontier.push(neighbor)
@@ -215,19 +256,19 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 # Mark path nodes
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors (reverse order for consistent left-to-right exploration)
-            neighbors = current.get_neighbors()
+            # Expand neighbors (sorted and reversed for consistent right-to-left stack behavior)
+            neighbors = self.get_sorted_neighbors(current)
             for neighbor in reversed(neighbors):
                 if neighbor not in visited:
                     neighbor.parent = current
@@ -294,20 +335,20 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 # Mark path nodes
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors only if within depth limit
+            # Expand neighbors only if within depth limit (sorted for determinism)
             if depth < depth_limit:
-                neighbors = current.get_neighbors()
+                neighbors = self.get_sorted_neighbors(current)
                 for neighbor in reversed(neighbors):
                     if neighbor not in visited:
                         neighbor.parent = current
@@ -348,7 +389,7 @@ class SearchAgent:
         for limit in range(max_depth + 1):
             # Reset for new iteration
             for node in self.graph.values():
-                if node.state not in ['source', 'goal']:
+                if node and node.state not in ['source', 'goal']:
                     node.state = 'empty'
                 node.parent = None
             
@@ -379,19 +420,19 @@ class SearchAgent:
                 self.nodes_explored += 1
                 
                 # Check if goal reached
-                if current == self.goal:
+                if self.is_goal(current):
                     self.success = True
                     self.path_found = self.reconstruct_path(current)
                     for node_name in self.path_found:
-                        node = self.graph[node_name]
-                        if node.state not in ['source', 'goal']:
+                        node = self.get_node_by_name(node_name)
+                        if node and node.state not in ['source', 'goal']:
                             node.state = 'path'
                     yield
                     return
                 
-                # Expand if within limit
+                # Expand if within limit (sorted for determinism)
                 if depth < limit:
-                    neighbors = current.get_neighbors()
+                    neighbors = self.get_sorted_neighbors(current)
                     for neighbor in reversed(neighbors):
                         if neighbor not in visited:
                             neighbor.parent = current
@@ -460,18 +501,18 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors
-            for neighbor in current.get_neighbors():
+            # Expand neighbors (sorted for deterministic tie-breaking when costs are equal)
+            for neighbor in self.get_sorted_neighbors(current):
                 if neighbor not in visited:
                     new_cost = current.cost + current.get_weight(neighbor)
                     
@@ -543,18 +584,18 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors
-            for neighbor in current.get_neighbors():
+            # Expand neighbors (sorted for deterministic tie-breaking)
+            for neighbor in self.get_sorted_neighbors(current):
                 if neighbor not in visited and neighbor not in frontier:
                     neighbor.cost = current.cost + current.get_weight(neighbor)
                     neighbor.parent = current
@@ -623,18 +664,18 @@ class SearchAgent:
             self.nodes_explored += 1
             
             # Check if goal reached
-            if current == self.goal:
+            if self.is_goal(current):
                 self.success = True
                 self.path_found = self.reconstruct_path(current)
                 for node_name in self.path_found:
-                    node = self.graph[node_name]
-                    if node.state not in ['source', 'goal']:
+                    node = self.get_node_by_name(node_name)
+                    if node and node.state not in ['source', 'goal']:
                         node.state = 'path'
                 yield
                 return
             
-            # Expand neighbors
-            for neighbor in current.get_neighbors():
+            # Expand neighbors (sorted for deterministic tie-breaking)
+            for neighbor in self.get_sorted_neighbors(current):
                 if neighbor not in visited:
                     new_cost = current.cost + current.get_weight(neighbor)
                     
@@ -723,14 +764,14 @@ class SearchAgent:
                     
                     # Mark path
                     for node_name in self.path_found:
-                        node = self.graph[node_name]
-                        if node.state not in ['source', 'goal']:
+                        node = self.get_node_by_name(node_name)
+                        if node and node.state not in ['source', 'goal']:
                             node.state = 'path'
                     yield
                     return
                 
-                # Expand forward neighbors
-                for neighbor in current.get_neighbors():
+                # Expand forward neighbors (sorted for determinism)
+                for neighbor in self.get_sorted_neighbors(current):
                     if neighbor not in forward_visited:
                         forward_visited[neighbor] = current
                         forward_frontier.push(neighbor)
@@ -776,14 +817,14 @@ class SearchAgent:
                     
                     # Mark path
                     for node_name in self.path_found:
-                        node = self.graph[node_name]
-                        if node.state not in ['source', 'goal']:
+                        node = self.get_node_by_name(node_name)
+                        if node and node.state not in ['source', 'goal']:
                             node.state = 'path'
                     yield
                     return
                 
-                # Expand backward neighbors (reverse edges)
-                for other_node in self.graph.values():
+                # Expand backward neighbors (reverse edges, sorted left-to-right for visual determinism)
+                for other_node in sorted(self.graph.values(), key=lambda n: (n.x, n.y)):
                     if current in other_node.get_neighbors() and other_node not in backward_visited:
                         backward_visited[other_node] = current
                         backward_frontier.push(other_node)
