@@ -1006,10 +1006,6 @@ class GraphVisualizer:
         document['modal-btn-node-cancel'].bind('click', self.cancel_node_creation)
         document['node-name-input'].bind('keypress', self.on_node_name_keypress)
         
-        # Collapse buttons
-        document['collapse-left'].bind('click', self.toggle_left_sidebar)
-        document['collapse-right'].bind('click', self.toggle_right_sidebar)
-        
         # Example graphs
         document['example-simple'].bind('click', lambda e: self.load_example('simple'))
         document['example-tree'].bind('click', lambda e: self.load_example('tree'))
@@ -2163,58 +2159,6 @@ class GraphVisualizer:
         # Re-initialize Lucide icons
         self.safe_lucide_init()
         self.render()
-    
-    def toggle_left_sidebar(self, event):
-        """Toggle left sidebar collapse"""
-        sidebar = document.select_one('.sidebar-left')
-        main_content = document.select_one('.main-content')
-        
-        sidebar.classList.toggle('collapsed')
-        
-        # Update main content grid classes
-        if sidebar.classList.contains('collapsed'):
-            main_content.classList.add('left-collapsed')
-        else:
-            main_content.classList.remove('left-collapsed')
-        
-        # Update both-collapsed class
-        right_collapsed = document.select_one('.sidebar-right').classList.contains('collapsed')
-        if sidebar.classList.contains('collapsed') and right_collapsed:
-            main_content.classList.add('both-collapsed')
-        else:
-            main_content.classList.remove('both-collapsed')
-        
-        # Re-initialize Lucide icons
-        timer.set_timeout(lambda: self.safe_lucide_init(), 50)
-        
-        # Re-render canvas after transition
-        timer.set_timeout(lambda: self.render(), 350)
-    
-    def toggle_right_sidebar(self, event):
-        """Toggle right sidebar collapse"""
-        sidebar = document.select_one('.sidebar-right')
-        main_content = document.select_one('.main-content')
-        
-        sidebar.classList.toggle('collapsed')
-        
-        # Update main content grid classes
-        if sidebar.classList.contains('collapsed'):
-            main_content.classList.add('right-collapsed')
-        else:
-            main_content.classList.remove('right-collapsed')
-        
-        # Update both-collapsed class
-        left_collapsed = document.select_one('.sidebar-left').classList.contains('collapsed')
-        if sidebar.classList.contains('collapsed') and left_collapsed:
-            main_content.classList.add('both-collapsed')
-        else:
-            main_content.classList.remove('both-collapsed')
-        
-        # Re-initialize Lucide icons
-        timer.set_timeout(lambda: self.safe_lucide_init(), 50)
-        
-        # Re-render canvas after transition
-        timer.set_timeout(lambda: self.render(), 350)
     
     # ===== Undo/Redo =====
     

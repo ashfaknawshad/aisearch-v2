@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Search Algorithm Visualizer v2.0</title>
+    <title>AI Search Algorithm Visualizer</title>
     <link rel="stylesheet" href="styles.css">
     
     <!-- Brython CDN -->
@@ -24,27 +24,28 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1>AI Search Algorithm Visualizer</h1>
-            <p>Interactive visualization of 8 classic search algorithms</p>
-            <div class="header-actions">
-                <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">
-                    <i data-lucide="moon"></i>
-                </button>
-                <a href="docs/algorithm-guide.md" target="_blank" class="btn-header-link">
-                    <i data-lucide="book-open"></i> <span>Algorithm Guide</span>
-                </a>
-                <a href="https://github.com/ashfaknawshad/aisearch-v2" target="_blank" class="btn-header-link">
-                    <i data-lucide="github"></i> <span>GitHub</span>
-                </a>
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>AI Search Algorithm Visualizer</h1>
+                    <p>Interactive visualization of 8 classic search algorithms</p>
+                </div>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">
+                        <i data-lucide="moon"></i>
+                    </button>
+                    <a href="docs/algorithm-guide.md" target="_blank" class="btn-header-link">
+                        <i data-lucide="book-open"></i> <span>Algorithm Guide</span>
+                    </a>
+                    <a href="https://github.com/ashfaknawshad/aisearch-v2" target="_blank" class="btn-header-link">
+                        <i data-lucide="github"></i> <span>GitHub</span>
+                    </a>
+                </div>
             </div>
         </header>
 
         <div class="main-content">
             <!-- Left Sidebar - Tools & Controls -->
             <aside class="sidebar-left">
-                <button id="collapse-left" class="collapse-btn collapse-btn-left" title="Collapse Left Panel">
-                    <i data-lucide="chevron-left"></i>
-                </button>
                 <div class="panel">
                     <h3><i data-lucide="cpu"></i> Algorithm Selection</h3>
                     <select id="algorithm-select" class="select-input">
@@ -247,9 +248,6 @@
 
             <!-- Right Sidebar - Data Display -->
             <aside class="sidebar-right">
-                <button id="collapse-right" class="collapse-btn collapse-btn-right" title="Collapse Right Panel">
-                    <i data-lucide="chevron-right"></i>
-                </button>
                 <div class="panel">
                     <h3><i data-lucide="activity"></i> Live Data Panel</h3>
                     <div class="data-display">
