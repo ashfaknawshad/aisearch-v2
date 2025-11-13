@@ -266,9 +266,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Contact
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
-- Project Link: [https://github.com/yourusername/ai-search-v2](https://github.com/yourusername/ai-search-v2)
+- GitHub: [@ashfaknawshad](https://github.com/ashfaknawshad)
+- Project Link: [https://github.com/ashfaknawshad/aisearch-v2](https://github.com/ashfaknawshad/aisearch-v2)
 
 ## 🗺️ Roadmap
 
@@ -287,4 +286,4 @@ If you find this project useful, please consider giving it a star! ⭐
 
 ---
 
-Made with 🤖 by [Your Name] | [License](LICENSE) | [Changelog](CHANGELOG.md)
+Made by [Ashfak Nawshad] | [License](LICENSE) | [Changelog](CHANGELOG.md)
