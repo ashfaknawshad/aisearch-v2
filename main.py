@@ -394,11 +394,10 @@ class GraphVisualizer:
         ctx.lineWidth = 3
         ctx.stroke()
         
-        # Draw weight label (only for algorithms that use costs)
+        # Draw weight label: show when labels are enabled (users can toggle labels)
+        # This allows BFS/DFS/DLS/etc. to show path/edge costs when users enable labels.
         should_show_weight = (
-            weight != 1 and 
-            hasattr(self, 'current_algo_type') and 
-            self.current_algo_type in ['informed', 'cost_only']
+            hasattr(self, 'show_labels') and self.show_labels
         )
         if should_show_weight:
             # Apply offset to label position
@@ -471,13 +470,8 @@ class GraphVisualizer:
         # Draw arrow head with offset
         self.draw_arrow_head(node1, node2, offset_x, offset_y)
         
-        # Draw weight label (if weight != 1 and algorithm uses costs)
-        # Only show for informed algorithms (A*, Greedy) and cost-based (UCS)
-        should_show_weight = (
-            weight != 1 and 
-            hasattr(self, 'current_algo_type') and 
-            self.current_algo_type in ['informed', 'cost_only']
-        )
+        # Show weight label when labels are enabled (users can toggle labels)
+        should_show_weight = (hasattr(self, 'show_labels') and self.show_labels)
         if should_show_weight:
             # Apply offset to label position for bidirectional edges
             mid_x = (node1.x + node2.x) / 2 + offset_x
@@ -521,13 +515,9 @@ class GraphVisualizer:
         self.ctx.lineWidth = 3
         self.ctx.stroke()
         
-        # Draw weight label if applicable
-        should_show_weight = (
-            weight != 1 and 
-            hasattr(self, 'current_algo_type') and 
-            self.current_algo_type in ['informed', 'cost_only']
-        )
-        
+        # Show weight label when labels are enabled (users can toggle labels)
+        should_show_weight = (hasattr(self, 'show_labels') and self.show_labels)
+
         if should_show_weight:
             mid_x = (node1.x + node2.x) / 2
             mid_y = (node1.y + node2.y) / 2
@@ -1914,8 +1904,8 @@ class GraphVisualizer:
                 svg += f'  <line x1="{node.x}" y1="{node.y}" x2="{neighbor.x}" y2="{neighbor.y}" '
                 svg += f'stroke="#9ca3af" stroke-width="2"/>\n'
                 
-                # Add weight label
-                if weight != 1:
+                # Add weight label when labels are enabled
+                if hasattr(self, 'show_labels') and self.show_labels:
                     mid_x = (node.x + neighbor.x) / 2
                     mid_y = (node.y + neighbor.y) / 2
                     svg += f'  <text x="{mid_x}" y="{mid_y - 10}" text-anchor="middle" font-size="12">{weight}</text>\n'

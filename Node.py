@@ -37,13 +37,13 @@ class Node:
         self.parent = None
         self.cost = 0  # g(n) - cost from start
         
-    def add_neighbor(self, neighbor, weight=1):
+    def add_neighbor(self, neighbor, weight=99):
         """
         Add a neighbor with an edge weight
         
         Args:
             neighbor (Node): The neighboring node
-            weight (float): Weight/cost of the edge (default 1)
+            weight (float): Weight/cost of the edge (default 99)
         """
         self.neighbors[neighbor] = weight
         
