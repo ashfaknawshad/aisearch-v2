@@ -1102,8 +1102,9 @@ class GraphVisualizer:
                     self.save_state()
                     self.render()
         
-        # Start panning on empty space
-        if node is None and self.current_tool in ['add-node', 'move-node']:
+        # Start panning on empty space (only for move-node tool, not add-node)
+        # Don't enable panning for add-node to prevent unwanted pan mode after creating nodes
+        if node is None and self.current_tool == 'move-node':
             self.is_panning = True
             self.pan_start_x = x
             self.pan_start_y = y
@@ -1202,6 +1203,10 @@ class GraphVisualizer:
     
     def on_key_down(self, event):
         """Handle keyboard shortcuts"""
+        # Don't process shortcuts if a modal is open (prevents shortcuts from triggering while typing node names)
+        if self.is_modal_open():
+            return
+        
         key = event.key.lower()
         
         if event.ctrlKey:
@@ -1315,14 +1320,15 @@ class GraphVisualizer:
             print(f'ℹ️ {algo.upper()}: Uses heuristics and path costs for decisions')
             
         elif algo in cost_algorithms:
-            # UCS: Hide heuristics, show path costs
+            # UCS: Enable label toggle to show path costs
             self.current_algo_type = 'cost_only'
             if self.show_labels:
                 self.show_labels = False
                 self.render()
-            heuristic_toggle_btn.disabled = True
-            heuristic_toggle_btn.style.opacity = '0.5'
-            heuristic_toggle_btn.title = 'Heuristics not used by UCS'
+            # Allow the user to toggle labels (show/hide path costs)
+            heuristic_toggle_btn.disabled = False
+            heuristic_toggle_btn.style.opacity = '1'
+            heuristic_toggle_btn.title = 'Toggle labels (path cost)'
             
             # Disable heuristic editing, enable weight editing
             edit_heuristic_btn.disabled = True
