@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Search Algorithm Visualizer</title>
     <link rel="stylesheet" href="styles.css">
-    
+
     <!-- Brython CDN -->
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython_stdlib.js"></script>
-    
+
     <!-- GIF.js for GIF export -->
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
-    
+
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
+
 <body class="dark-mode" onload="brython(); lucide.createIcons();">
-    
+
     <div class="container">
         <!-- Header -->
         <header class="header">
@@ -62,13 +64,14 @@
                             <option value="astar">A* Search</option>
                         </optgroup>
                     </select>
-                    
+
                     <div class="depth-limit-container" style="display: none;">
                         <label for="depth-limit">Depth Limit:</label>
                         <input type="number" id="depth-limit" value="5" min="1" max="20" class="input-field">
                     </div>
-                    
-                    <div id="graph-type-indicator" style="display: none; margin-top: 12px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+
+                    <div id="graph-type-indicator"
+                        style="display: none; margin-top: 12px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
                         <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
                             <i data-lucide="info" style="width: 16px; height: 16px;"></i>
                             <span>Graph Type: <strong id="graph-type-text">Not Set</strong></span>
@@ -122,7 +125,7 @@
                         <button id="btn-stop" class="btn-danger btn-full" disabled>
                             <i data-lucide="square"></i> Stop
                         </button>
-                        
+
                         <div class="step-controls">
                             <button id="btn-step-back" class="btn-step" disabled title="Step Backward (←)">
                                 <i data-lucide="skip-back"></i>
@@ -131,7 +134,7 @@
                                 <i data-lucide="skip-forward"></i>
                             </button>
                         </div>
-                        
+
                         <div class="speed-control">
                             <label for="speed-slider">Speed: <span id="speed-value">5x</span></label>
                             <input type="range" id="speed-slider" min="1" max="10" value="5" class="slider">
@@ -194,7 +197,8 @@
                         <button id="btn-reset-view" class="btn-icon-sm" title="Reset View (R)">
                             <i data-lucide="maximize-2"></i>
                         </button>
-                        <button id="btn-toggle-labels" class="btn-icon-sm" title="Toggle Labels (L)" id="heuristic-toggle">
+                        <button id="btn-toggle-labels" class="btn-icon-sm" title="Toggle Labels (L)"
+                            id="heuristic-toggle">
                             <i data-lucide="tag"></i>
                         </button>
                         <button id="btn-toggle-grid" class="btn-icon-sm" title="Toggle Grid">
@@ -240,7 +244,11 @@
                         </div>
                         <div class="legend-item">
                             <span class="legend-color" style="background: #f59e0b;"></span>
-                            <span>Path</span>
+                            <span>Path Nodes</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background: #00ff00;"></span>
+                            <span>Path Edges</span>
                         </div>
                     </div>
                 </div>
@@ -265,9 +273,10 @@
                         </div>
                         <div class="data-row">
                             <span class="data-label">Path Found:</span>
-                            <div id="path-list" class="data-value"><span class="array-empty">No path found yet</span></div>
+                            <div id="path-list" class="data-value"><span class="array-empty">No path found yet</span>
+                            </div>
                         </div>
-                        
+
                         <div id="informed-search-info" style="display: none;">
                             <hr>
                             <div class="data-row">
@@ -345,10 +354,10 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Built with ❤️ using Brython | 
-               <a href="docs/algorithm-guide.md">Algorithm Guide</a> | 
-               <a href="docs/api-reference.md">API Reference</a> | 
-               <a href="docs/deployment-guide.md">Deployment Guide</a>
+            <p>Built with ❤️ using Brython |
+                <a href="docs/algorithm-guide.md">Algorithm Guide</a> |
+                <a href="docs/api-reference.md">API Reference</a> |
+                <a href="docs/deployment-guide.md">Deployment Guide</a>
             </p>
         </footer>
     </div>
@@ -371,7 +380,8 @@
                     <i data-lucide="minus-circle"></i> Undirected
                 </button>
             </div>
-            <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
+            <div
+                style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 13px; color: var(--text-secondary);">
                 <strong>Directed:</strong> Edges have direction (arrows)<br>
                 <strong>Undirected:</strong> Edges work both ways (lines)
             </div>
@@ -388,7 +398,9 @@
             <p style="margin: 16px 0 12px 0; line-height: 1.6; color: var(--text-secondary);">
                 Enter a name for this node (letters or numbers):
             </p>
-            <input type="text" id="node-name-input" class="input-field" style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 16px;" placeholder="e.g., A, B, Start, 1, 2, etc.">
+            <input type="text" id="node-name-input" class="input-field"
+                style="width: 100%; padding: 10px; font-size: 14px; margin-bottom: 16px;"
+                placeholder="e.g., A, B, Start, 1, 2, etc.">
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
                 <button id="modal-btn-node-cancel" class="btn-secondary" style="padding: 10px 20px;">
                     <i data-lucide="x"></i> Cancel
@@ -407,4 +419,5 @@
     <script type="text/python" src="main.py"></script>
 
 </body>
+
 </html>

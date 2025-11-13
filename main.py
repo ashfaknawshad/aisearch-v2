@@ -67,6 +67,9 @@ class GraphVisualizer:
         self.animation_speed = 5  # 1-10 scale
         self.animation_timer = None
         
+        # Path edges for highlighting
+        self.path_edges = set()  # Store (from_node.name, to_node.name) tuples
+        
         # Export state
         self.recording_gif = False
         self.gif_frames = []
@@ -459,16 +462,20 @@ class GraphVisualizer:
             offset_x = 0
             offset_y = 0
         
-        # Draw line with offset
+        # Check if this edge is part of the final path
+        edge_key = (node1.name, node2.name)
+        is_path_edge = edge_key in self.path_edges
+        
+        # Draw line with offset - bright color if path edge, gray otherwise
         self.ctx.beginPath()
         self.ctx.moveTo(node1.x + offset_x, node1.y + offset_y)
         self.ctx.lineTo(node2.x + offset_x, node2.y + offset_y)
-        self.ctx.strokeStyle = '#94a3b8'
-        self.ctx.lineWidth = 3
+        self.ctx.strokeStyle = '#00ff00' if is_path_edge else '#94a3b8'  # Bright lime for path, gray for others
+        self.ctx.lineWidth = 5 if is_path_edge else 3  # Thicker for path edges
         self.ctx.stroke()
         
         # Draw arrow head with offset
-        self.draw_arrow_head(node1, node2, offset_x, offset_y)
+        self.draw_arrow_head(node1, node2, offset_x, offset_y, is_path_edge)
         
         # Show weight label when labels are enabled (users can toggle labels)
         should_show_weight = (hasattr(self, 'show_labels') and self.show_labels)
@@ -507,12 +514,17 @@ class GraphVisualizer:
     
     def draw_undirected_edge(self, node1, node2, weight):
         """Draw an undirected edge (simple line without arrow)"""
-        # Draw line
+        # Check if this edge is part of the final path
+        edge_key = (node1.name, node2.name)
+        reverse_edge_key = (node2.name, node1.name)
+        is_path_edge = edge_key in self.path_edges or reverse_edge_key in self.path_edges
+        
+        # Draw line - bright color if path edge, gray otherwise
         self.ctx.beginPath()
         self.ctx.moveTo(node1.x, node1.y)
         self.ctx.lineTo(node2.x, node2.y)
-        self.ctx.strokeStyle = '#94a3b8'
-        self.ctx.lineWidth = 3
+        self.ctx.strokeStyle = '#00ff00' if is_path_edge else '#94a3b8'  # Bright lime for path, gray for others
+        self.ctx.lineWidth = 5 if is_path_edge else 3  # Thicker for path edges
         self.ctx.stroke()
         
         # Show weight label when labels are enabled (users can toggle labels)
@@ -591,7 +603,7 @@ class GraphVisualizer:
             ctx.fillStyle = text_color
             ctx.fillText(text, mid_x, mid_y)
     
-    def draw_arrow_head(self, from_node, to_node, offset_x=0, offset_y=0):
+    def draw_arrow_head(self, from_node, to_node, offset_x=0, offset_y=0, is_path_edge=False):
         """Draw arrow head on edge with optional offset for bidirectional edges"""
         angle = math.atan2(to_node.y - from_node.y, to_node.x - from_node.x)
         arrow_length = 12
@@ -600,6 +612,10 @@ class GraphVisualizer:
         node_radius = 25
         end_x = to_node.x - math.cos(angle) * node_radius + offset_x
         end_y = to_node.y - math.sin(angle) * node_radius + offset_y
+        
+        # Arrow color - bright for path, gray for others
+        arrow_color = '#00ff00' if is_path_edge else '#94a3b8'
+        arrow_width = 4 if is_path_edge else 3
         
         # Arrow points
         self.ctx.beginPath()
@@ -613,8 +629,8 @@ class GraphVisualizer:
             end_x - arrow_length * math.cos(angle + math.pi / 6),
             end_y - arrow_length * math.sin(angle + math.pi / 6)
         )
-        self.ctx.strokeStyle = '#94a3b8'
-        self.ctx.lineWidth = 3
+        self.ctx.strokeStyle = arrow_color
+        self.ctx.lineWidth = arrow_width
         self.ctx.stroke()
     
     # ===== Graph Operations =====
@@ -1526,6 +1542,14 @@ class GraphVisualizer:
         self.update_data_display('traversal-list', state['traversal'])
         self.update_data_display('path-list', state['path'])
         
+        # Build path edges set for highlighting
+        path_list = state['path']
+        self.path_edges.clear()
+        for i in range(len(path_list) - 1):
+            from_node_name = path_list[i]
+            to_node_name = path_list[i + 1]
+            self.path_edges.add((from_node_name, to_node_name))
+        
         # Update informed search info
         info = state['current_info']
         algo = document['algorithm-select'].value
@@ -1664,6 +1688,9 @@ class GraphVisualizer:
                 node.state = 'source'
             if node in self.goal_nodes:
                 node.state = 'goal'
+        
+        # Clear path edges highlighting
+        self.path_edges.clear()
         
         # Clear data display with empty states
         document['fringe-list'].innerHTML = '<span class="array-empty">Empty</span>'
