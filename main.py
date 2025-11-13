@@ -39,6 +39,7 @@ class GraphVisualizer:
         self.show_labels = True
         self.show_grid = True
         
+        
         # Algorithm type for conditional rendering
         self.current_algo_type = 'uninformed'  # Default to uninformed (BFS)
         
@@ -399,7 +400,6 @@ class GraphVisualizer:
             hasattr(self, 'current_algo_type') and 
             self.current_algo_type in ['informed', 'cost_only']
         )
-        
         if should_show_weight:
             # Apply offset to label position
             mid_x = (node1.x + node2.x) / 2 + offset_x
@@ -478,7 +478,6 @@ class GraphVisualizer:
             hasattr(self, 'current_algo_type') and 
             self.current_algo_type in ['informed', 'cost_only']
         )
-        
         if should_show_weight:
             # Apply offset to label position for bidirectional edges
             mid_x = (node1.x + node2.x) / 2 + offset_x
@@ -996,6 +995,8 @@ class GraphVisualizer:
         
         # Theme toggle
         document['theme-toggle'].bind('click', self.toggle_theme)
+
+        
         
         # Graph type modal buttons
         document['modal-btn-directed'].bind('click', self.set_graph_type_directed)
@@ -1061,10 +1062,11 @@ class GraphVisualizer:
                     self.selected_node = node
                     self.render()
                 else:
+                    # Complete edge
                     self.add_edge(self.edge_start_node, node, 1)
                     self.edge_start_node = None
                     self.selected_node = None
-                    
+
         elif self.current_tool == 'delete-edge':
             edge = self.find_edge_at(x, y)
             if edge:
@@ -1349,9 +1351,10 @@ class GraphVisualizer:
             if self.show_labels:
                 self.show_labels = False
                 self.render()
-            heuristic_toggle_btn.disabled = True
-            heuristic_toggle_btn.style.opacity = '0.5'
-            heuristic_toggle_btn.title = 'Heuristics not used by this algorithm'
+            # Allow the user to toggle labels (show/hide) even for uninformed algorithms
+            heuristic_toggle_btn.disabled = False
+            heuristic_toggle_btn.style.opacity = '1'
+            heuristic_toggle_btn.title = 'Toggle labels (heuristics / path cost)'
             
             # Enable weight editing for all algorithms (path cost always displayed)
             edit_heuristic_btn.disabled = True
@@ -2127,6 +2130,8 @@ class GraphVisualizer:
             btn.classList.add('active')
         else:
             btn.classList.remove('active')
+
+    
     
     def safe_lucide_init(self):
         """Safely initialize Lucide icons"""
