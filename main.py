@@ -274,7 +274,9 @@ class GraphVisualizer:
             text_color = '#ffffff'  # White for red/green/purple nodes
         
         self.ctx.fillStyle = text_color
-        self.ctx.fillText(str(node.name), node.x, node.y - 6)
+        # Use custom_name if available, otherwise use node.name
+        display_name = node.custom_name if hasattr(node, 'custom_name') else str(node.name)
+        self.ctx.fillText(display_name, node.x, node.y - 6)
         
         # Highlight selected node
         if self.selected_node == node:
@@ -777,8 +779,9 @@ class GraphVisualizer:
         x, y = self.pending_node_position
         self.pending_node_position = None
         
-        # Create the node
-        node = Node(name, x, y, 0)
+        # Create the node with node_counter as ID
+        node = Node(self.node_counter, x, y, 0)
+        node.custom_name = name  # Store custom name separately
         
         # First node becomes source
         if len(self.nodes) == 0:
