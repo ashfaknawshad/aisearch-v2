@@ -73,6 +73,7 @@ class GraphVisualizer:
         # Export state
         self.recording_gif = False
         self.gif_frames = []
+        self.sequence_frame_index = 0  # For image sequence export
         
         # Undo/Redo stacks
         self.undo_stack = []
@@ -1027,6 +1028,7 @@ class GraphVisualizer:
         # Export buttons
         document['btn-export-png'].bind('click', self.export_png)
         document['btn-export-gif'].bind('click', self.export_gif)
+        document['btn-export-sequence'].bind('click', self.export_sequence)
         document['btn-export-pdf'].bind('click', self.export_pdf)
         document['btn-export-svg'].bind('click', self.export_svg)
         document['btn-export-json'].bind('click', self.export_json)
@@ -1903,7 +1905,7 @@ class GraphVisualizer:
         print(f'\n🎬 Frame capture complete! Captured {len(self.gif_frames)} frames')
         
         # Download all frames as individual PNGs
-        print(f'� Downloading {len(self.gif_frames)} frames...')
+        print(f'📥 Downloading {len(self.gif_frames)} frames...')
         
         try:
             # Render the GIF (V1 approach - will trigger 'finished' callback)
@@ -1915,7 +1917,49 @@ class GraphVisualizer:
             alert(f'Error rendering GIF: {e}')
             self.recording_gif = False
             return
+    
+    def export_sequence(self, event):
+        """Export animation frames as PNG in a ZIP file"""
+        if not self.animation_states:
+            alert('Run search first')
+            return
         
+        if not hasattr(window, 'JSZip'):
+            alert('ZIP library not loaded')
+            return
+        
+        self.zip_file = window.JSZip.new()
+        self.sequence_frame_index = 0
+        self.export_next_zip_frame()
+    
+    def export_next_zip_frame(self):
+        """Add next frame to ZIP"""
+        if self.sequence_frame_index >= len(self.animation_states):
+            self.finish_zip_export()
+            return
+        
+        state = self.animation_states[self.sequence_frame_index]
+        self.restore_search_state(state)
+        
+        frame_num = self.sequence_frame_index + 1
+        filename = f'frame_{frame_num:04d}.png'
+        data_url = self.canvas.toDataURL('image/png')
+        base64_data = data_url.split('base64,')[1]
+        self.zip_file.file(filename, base64_data, {'base64': True})
+        
+        self.sequence_frame_index += 1
+        timer.set_timeout(self.export_next_zip_frame, 10)
+    
+    def finish_zip_export(self):
+        """Generate and download ZIP"""
+        zip_blob = self.zip_file.generateAsync({'type': 'blob'})
+        
+        def on_zip_ready(blob):
+            url = window.URL.createObjectURL(blob)
+            self.download_file(url, f'frames_{int(window.Date.now())}.zip')
+            timer.set_timeout(lambda: window.URL.revokeObjectURL(url), 2000)
+        
+        zip_blob.then(on_zip_ready)
 
     
     def export_pdf(self, event):

@@ -17,6 +17,9 @@
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+    <!-- JSZip for ZIP export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -172,6 +175,10 @@
                         </button>
                         <button id="btn-export-gif" class="btn-secondary btn-small" title="Export Animation as GIF">
                             <i data-lucide="film"></i> GIF
+                        </button>
+                        <button id="btn-export-sequence" class="btn-secondary btn-small"
+                            title="Export as ZIP with PNG Sequence">
+                            <i data-lucide="archive"></i> Zip
                         </button>
                         <button id="btn-export-pdf" class="btn-secondary btn-small" title="Export Report as PDF">
                             <i data-lucide="file-text"></i> PDF
