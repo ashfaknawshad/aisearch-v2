@@ -90,41 +90,6 @@ An interactive web-based visualizer for classic AI search algorithms built with 
    - Select `main` branch as source
    - Your site will be live at `https://yourusername.github.io/ai-search-v2/`
 
-### Next.js Application
-
-1. **Navigate to the Next.js app:**
-   ```bash
-   cd nextjs-app
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Setup environment variables:**
-   ```bash
-   cp .env.local.example .env.local
-   # Edit .env.local with your configuration
-   ```
-
-4. **Setup database:**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
-
-5. **Run development server:**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000)
-
-6. **Build for production:**
-   ```bash
-   npm run build
-   npm start
-   ```
 
 ## 📖 Usage
 
