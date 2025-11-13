@@ -869,6 +869,24 @@ class GraphVisualizer:
         self.save_state()
         self.render()
     
+    def toggle_source(self, node):
+        """Toggle source state of node"""
+        if node.state == 'source':
+            # Remove source
+            node.state = 'empty'
+            self.source_node = None
+        else:
+            # Set as source (remove from goals if needed)
+            if node in self.goal_nodes:
+                self.goal_nodes.remove(node)
+            # Clear previous source
+            if self.source_node:
+                self.source_node.state = 'empty'
+            node.state = 'source'
+            self.source_node = node
+        self.save_state()
+        self.render()
+    
     def toggle_goal(self, node):
         """Toggle goal state of node"""
         if node.state == 'goal':
@@ -983,7 +1001,7 @@ class GraphVisualizer:
         
         # Tool buttons
         tools = ['add-node', 'add-edge', 'move-node', 'delete-node', 
-                'delete-edge', 'set-goal', 'edit-heuristic', 'edit-weight', 'rename-node']
+                'delete-edge', 'set-source', 'set-goal', 'edit-heuristic', 'edit-weight', 'rename-node']
         for tool in tools:
             btn = document[f'tool-{tool}']
             btn.bind('click', lambda e, t=tool: self.select_tool(t))
@@ -1099,6 +1117,9 @@ class GraphVisualizer:
             edge = self.find_edge_at(x, y)
             if edge:
                 self.delete_edge(edge[0], edge[1])
+        
+        elif self.current_tool == 'set-source' and node:
+            self.toggle_source(node)
                 
         elif self.current_tool == 'set-goal' and node:
             self.toggle_goal(node)
@@ -1266,6 +1287,8 @@ class GraphVisualizer:
                 self.select_tool('move-node')
             elif key == 'd':
                 self.select_tool('delete-node')
+            elif key == 's':
+                self.select_tool('set-source')
             elif key == 'g':
                 self.select_tool('set-goal')
             elif key == 'h':
@@ -1295,7 +1318,7 @@ class GraphVisualizer:
         
         # Update button states
         tools = ['add-node', 'add-edge', 'move-node', 'delete-node', 
-                'delete-edge', 'set-goal', 'edit-heuristic', 'edit-weight']
+                'delete-edge', 'set-source', 'set-goal', 'edit-heuristic', 'edit-weight', 'rename-node']
         for t in tools:
             btn = document[f'tool-{t}']
             if t == tool:
