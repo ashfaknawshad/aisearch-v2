@@ -72,8 +72,8 @@ An interactive web-based visualizer for classic AI search algorithms built with 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/ai-search-v2.git
-   cd ai-search-v2
+   git clone https://github.com/ashfaknawshad/aisearch-v2.git
+   cd aisearch-v2
    ```
 
 2. **Open in browser:**
@@ -88,7 +88,7 @@ An interactive web-based visualizer for classic AI search algorithms built with 
    - Push to GitHub
    - Go to repository Settings → Pages
    - Select `main` branch as source
-   - Your site will be live at `https://yourusername.github.io/ai-search-v2/`
+   - Your site will be live at `https://yourusername.github.io/aisearch-v2/`
 
 
 ## 📖 Usage
