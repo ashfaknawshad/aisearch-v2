@@ -47,6 +47,7 @@ class SearchAgent:
         self.nodes_explored = 0
         self.path_cost = 0
         self.success = False
+        self.failure_reason = None  # Track why algorithm failed
         
         # For informed search display
         self.current_node_info = {
@@ -64,6 +65,7 @@ class SearchAgent:
         self.nodes_explored = 0
         self.path_cost = 0
         self.success = False
+        self.failure_reason = None
         
         # Reset all node states except source and goal
         for node in self.graph.values():
@@ -555,6 +557,8 @@ class SearchAgent:
         frontier.push(self.source, self.source.heuristic)
         self.fringe_list = [self.source.name]
         visited = set()
+        stuck_counter = 0  # Track consecutive dead-ends
+        last_frontier_size = 1
         
         yield  # Show initial state
         
@@ -594,19 +598,32 @@ class SearchAgent:
                 yield
                 return
             
+            # Count unvisited neighbors before expansion
+            unvisited_neighbors = [n for n in self.get_sorted_neighbors(current) 
+                                  if n not in visited and n not in frontier]
+            
             # Expand neighbors (sorted for deterministic tie-breaking)
-            for neighbor in self.get_sorted_neighbors(current):
-                if neighbor not in visited and neighbor not in frontier:
-                    neighbor.cost = current.cost + current.get_weight(neighbor)
-                    neighbor.parent = current
-                    frontier.push(neighbor, neighbor.heuristic)
+            for neighbor in unvisited_neighbors:
+                neighbor.cost = current.cost + current.get_weight(neighbor)
+                neighbor.parent = current
+                frontier.push(neighbor, neighbor.heuristic)
+            
+            # Check if greedy is stuck (no new nodes added to frontier)
+            current_frontier_size = len(frontier.get_all_nodes())
+            if len(unvisited_neighbors) == 0 and current_frontier_size == 0:
+                # Dead-end: no unvisited neighbors and frontier is empty
+                self.success = False
+                self.failure_reason = "Greedy search got stuck in a dead-end"
+                yield
+                return
             
             # Update fringe list after expansion
             self.fringe_list = [n.name for n in frontier.get_all_nodes()]
             yield
         
-        # No path found
+        # Frontier exhausted without finding goal
         self.success = False
+        self.failure_reason = "No path found - all reachable nodes explored"
         yield
     
     def a_star_search(self):

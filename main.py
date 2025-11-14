@@ -1771,7 +1771,8 @@ class GraphVisualizer:
             results_html += f'<div class="result-metric"><span>Path Cost:</span><span>{self.search_agent.path_cost}</span></div>'
             results_html += f'<div class="result-metric"><span>Path Length:</span><span>{len(self.search_agent.path_found)} nodes</span></div>'
         else:
-            results_html += '<p class="status-failure">❌ No Path Found</p>'
+            failure_msg = self.search_agent.failure_reason if self.search_agent.failure_reason else 'No Path Found'
+            results_html += f'<p class="status-failure">❌ {failure_msg}</p>'
         
         results_html += f'<div class="result-metric"><span>Nodes Explored:</span><span>{self.search_agent.nodes_explored}</span></div>'
         results_html += f'<div class="result-metric"><span>Total States:</span><span>{len(self.animation_states)}</span></div>'
@@ -1957,7 +1958,8 @@ class GraphVisualizer:
                 y_pos += 7
                 pdf.text(f'Path: {" -> ".join(map(str, self.search_agent.path_found))}', 20, y_pos)
             else:
-                pdf.text('Status: No Path Found', 20, y_pos)
+                failure_msg = self.search_agent.failure_reason if self.search_agent.failure_reason else 'No Path Found'
+                pdf.text(f'Status: {failure_msg}', 20, y_pos)
             
             y_pos += 7
             pdf.text(f'Nodes Explored: {self.search_agent.nodes_explored}', 20, y_pos)
@@ -2036,7 +2038,8 @@ class GraphVisualizer:
                 'success': self.search_agent.success,
                 'path': self.search_agent.path_found,
                 'path_cost': path_cost,
-                'nodes_explored': self.search_agent.nodes_explored
+                'nodes_explored': self.search_agent.nodes_explored,
+                'failure_reason': self.search_agent.failure_reason
             }
         
         json_str = json.dumps(graph_data, indent=2)
@@ -2053,6 +2056,8 @@ class GraphVisualizer:
         csv = 'Metric,Value\n'
         csv += f'Algorithm,{document["algorithm-select"].value}\n'
         csv += f'Success,{self.search_agent.success}\n'
+        if self.search_agent.failure_reason:
+            csv += f'Failure Reason,{self.search_agent.failure_reason}\n'
         csv += f'Path Cost,{self.search_agent.path_cost}\n'
         csv += f'Nodes Explored,{self.search_agent.nodes_explored}\n'
         csv += f'Path Length,{len(self.search_agent.path_found)}\n'
