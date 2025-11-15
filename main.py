@@ -694,19 +694,23 @@ class GraphVisualizer:
         """Update the graph type indicator in the control panel"""
         indicator = document['graph-type-indicator']
         text_elem = document['graph-type-text']
+        dropdown = document['graph-type-select']
         
         if self.graph_is_undirected is None:
             indicator.style.display = 'none'
+            # Keep dropdown enabled for initial selection
         else:
             indicator.style.display = 'block'
             if self.graph_is_undirected:
                 text_elem.textContent = 'Undirected'
                 indicator.style.background = 'rgba(16, 185, 129, 0.1)'
                 indicator.style.borderColor = 'rgba(16, 185, 129, 0.3)'
+                dropdown.value = 'undirected'
             else:
                 text_elem.textContent = 'Directed'
                 indicator.style.background = 'rgba(59, 130, 246, 0.1)'
                 indicator.style.borderColor = 'rgba(59, 130, 246, 0.3)'
+                dropdown.value = 'directed'
             
             # Reinitialize Lucide icons
             timer.set_timeout(lambda: self.safe_lucide_init(), 50)
@@ -1012,6 +1016,7 @@ class GraphVisualizer:
         
         # Algorithm selection
         document['algorithm-select'].bind('change', self.on_algorithm_change)
+        document['graph-type-select'].bind('change', self.on_graph_type_change)
         
         # Animation controls
         document['btn-start'].bind('click', self.start_search)
@@ -1388,8 +1393,8 @@ class GraphVisualizer:
         elif algo in cost_algorithms:
             # UCS: Enable label toggle to show path costs
             self.current_algo_type = 'cost_only'
-            if self.show_labels:
-                self.show_labels = False
+            if not self.show_labels:
+                self.show_labels = True
                 self.render()
             # Allow the user to toggle labels (show/hide path costs)
             heuristic_toggle_btn.disabled = False
@@ -2306,7 +2311,47 @@ class GraphVisualizer:
         else:
             btn.classList.remove('active')
 
-    
+    def on_graph_type_change(self, event):
+        """Handle graph type dropdown change"""
+        dropdown = document['graph-type-select']
+        selected_type = dropdown.value
+        
+        if selected_type == '':
+            return
+        
+        # If graph already has nodes and type is being changed
+        if len(self.nodes) > 0 and self.graph_is_undirected is not None:
+            # Ask for confirmation
+            if not window.confirm('Changing graph type will modify existing edges. Continue?'):
+                # Reset dropdown to current type
+                if self.graph_is_undirected:
+                    dropdown.value = 'undirected'
+                else:
+                    dropdown.value = 'directed'
+                return
+        
+        # Set the new graph type
+        new_type = (selected_type == 'undirected')
+        
+        # If we're switching from directed to undirected, add reverse edges
+        if self.graph_is_undirected is not None and new_type and not self.graph_is_undirected:
+            edges_to_add = []
+            for node in self.nodes.values():
+                for neighbor, weight in list(node.neighbors.items()):
+                    # Check if reverse edge exists
+                    if node not in neighbor.neighbors:
+                        edges_to_add.append((neighbor, node, weight))
+            
+            # Add missing reverse edges
+            for from_node, to_node, weight in edges_to_add:
+                from_node.add_neighbor(to_node, weight)
+        
+        self.graph_is_undirected = new_type
+        self.update_graph_type_indicator()
+        self.render()
+        
+        mode = "UNDIRECTED" if self.graph_is_undirected else "DIRECTED"
+        print(f'📊 Graph type set to: {mode}')
     
     def safe_lucide_init(self):
         """Safely initialize Lucide icons"""

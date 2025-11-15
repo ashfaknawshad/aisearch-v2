@@ -74,6 +74,15 @@
                         <input type="number" id="depth-limit" value="5" min="1" max="20" class="input-field">
                     </div>
 
+                    <div class="graph-type-container" style="margin-top: 12px;">
+                        <label for="graph-type-select">Graph Type:</label>
+                        <select id="graph-type-select" class="select-input">
+                            <option value="" selected disabled>Select graph type first</option>
+                            <option value="directed">Directed (arrows)</option>
+                            <option value="undirected">Undirected (lines)</option>
+                        </select>
+                    </div>
+
                     <div id="graph-type-indicator"
                         style="display: none; margin-top: 12px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
                         <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
@@ -232,9 +241,9 @@
                         <div><kbd>←/→</kbd> Step Back/Forward</div>
                         <div><kbd>Ctrl+Z</kbd> Undo</div>
                         <div><kbd>Ctrl+Y</kbd> Redo</div>
-                        <div><kbd>Ctrl+S</kbd> Save</div>
+                        <div><kbd>Ctrl+S</kbd> Save</kbd>
+                        </div>
                     </div>
-                </div>
             </aside>
 
             <!-- Center - Canvas -->
