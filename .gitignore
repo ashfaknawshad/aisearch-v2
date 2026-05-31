@@ -78,6 +78,10 @@ coverage/
 dist/
 build/
 
+# Keep browser libraries needed for offline Windows executable builds
+!vendor/
+!vendor/*.js
+
 # Temporary files
 tmp/
 temp/
