@@ -25,6 +25,7 @@ Your code is already pushed to: https://github.com/ashfaknawshad/aisearch-v2
 ## What's Deployed?
 
 ✅ **Core Files:**
+
 - `index.html` - Main application
 - `styles.css` - Styling
 - `main.py` - Main Python/Brython code
@@ -32,7 +33,8 @@ Your code is already pushed to: https://github.com/ashfaknawshad/aisearch-v2
 - `gif.worker.js` - GIF export functionality
 
 ✅ **Features:**
-- 8 search algorithms (BFS, DFS, DLS, IDS, UCS, Bidirectional, Greedy, A*)
+
+- 8 search algorithms (BFS, DFS, DLS, IDS, UCS, Bidirectional, Greedy, A\*)
 - Modal-based UI (no browser prompts)
 - Directed/Undirected graph support
 - Custom node naming (letters or numbers)
@@ -54,6 +56,7 @@ powershell -ExecutionPolicy Bypass -File .\build-windows-exe.ps1
 ```
 
 Notes:
+
 - Designed for Windows 10/11.
 - Works offline.
 - No Python/Node dependency on target PCs.
@@ -61,6 +64,7 @@ Notes:
 ## Troubleshooting
 
 If the site doesn't work:
+
 - Wait 2-3 minutes for GitHub Pages to build
 - Check that all files are in the root directory (they are!)
 - Make sure GitHub Pages is enabled in settings
@@ -78,4 +82,5 @@ The `nextjs-app` folder was removed for now. You can work on it separately and d
 ---
 
 ### Note on Windows Executables (Git LFS)
+
 The `release/` folder contains the `.exe` files tracked using Git LFS. The large `.cab` files (WebView2 runtime installers) are intentionally ignored in Git to save space. If you are building the Native app yourself or need the Fixed Version Runtime, the build script `build-windows-exe.ps1` will automatically download them for you if they are missing.
