@@ -90,6 +90,21 @@ An interactive web-based visualizer for classic AI search algorithms built with 
    - Select `main` branch as source
    - Your site will be live at `https://yourusername.github.io/aisearch-v2/`
 
+### Windows Fully Portable EXE
+
+Use this build when you want a download-and-run Windows app:
+
+- File name: `AI Search Algorithm Visualizer Fully Portable.exe`
+- Output location: `release/AI Search Algorithm Visualizer Fully Portable.exe`
+- Works offline after download
+- No Python/Node install required on the target PC
+- Includes bundled WebView2 fixed runtime for portability across Windows 10/11
+
+Build command:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows-exe.ps1
+```
+
 
 ## 📖 Usage
 
