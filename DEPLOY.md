@@ -74,3 +74,8 @@ The `nextjs-app` folder was removed for now. You can work on it separately and d
 
 **Repository:** https://github.com/ashfaknawshad/aisearch-v2
 **Live Site:** https://ashfaknawshad.github.io/aisearch-v2/ (once enabled)
+
+---
+
+### Note on Windows Executables (Git LFS)
+The `release/` folder contains the `.exe` files tracked using Git LFS. The large `.cab` files (WebView2 runtime installers) are intentionally ignored in Git to save space. If you are building the Native app yourself or need the Fixed Version Runtime, the build script `build-windows-exe.ps1` will automatically download them for you if they are missing.

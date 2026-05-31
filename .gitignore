@@ -78,8 +78,6 @@ coverage/
 dist/
 build/
 release/*.WebView2/
-release/AI Search Algorithm Visualizer Native.exe
-release/AI Search Algorithm Visualizer.exe
 
 # Keep browser libraries needed for offline Windows executable builds
 !vendor/
@@ -122,7 +120,8 @@ next-env.d.ts
 # Vercel
 .vercel
 
-# Ignore Large Binaries
+# Ignore large binary files (Users can download them dynamically or from GitHub releases)
 *.exe
 *.cab
 *.zip
+
