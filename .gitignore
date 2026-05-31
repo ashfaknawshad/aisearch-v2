@@ -121,7 +121,7 @@ next-env.d.ts
 .vercel
 
 # Ignore large binary files (Users can download them dynamically or from GitHub releases)
-*.exe
+AI Search Algorithm Visualizer Fully Portable.exe
 *.cab
 *.zip
 
