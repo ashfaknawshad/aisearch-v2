@@ -1,0 +1,14 @@
+[
+  {
+    "version": "148.0.3967.96",
+    "arch": "x64",
+    "fileName": "Microsoft.WebView2.FixedVersionRuntime.148.0.3967.96.x64.cab",
+    "bytes": 290392288
+  },
+  {
+    "version": "148.0.3967.96",
+    "arch": "x86",
+    "fileName": "Microsoft.WebView2.FixedVersionRuntime.148.0.3967.96.x86.cab",
+    "bytes": 249755150
+  }
+]

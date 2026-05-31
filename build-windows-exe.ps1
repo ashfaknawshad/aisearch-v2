@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = "release\AI Search Algorithm Visualizer.exe"
+    [string]$OutputPath = "release\AI Search Algorithm Visualizer Fully Portable.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +43,7 @@ $webView2WinForms = Join-Path $webView2Root "Microsoft.Web.WebView2.WinForms.dll
 $webView2Core = Join-Path $webView2Root "Microsoft.Web.WebView2.Core.dll"
 $webView2LoaderX64 = Join-Path $webView2Root "x64\WebView2Loader.dll"
 $webView2LoaderX86 = Join-Path $webView2Root "x86\WebView2Loader.dll"
+$fixedRuntimeManifest = Join-Path $webView2Root "fixed-runtime\webview2-fixed-runtime.json"
 
 foreach ($file in $files) {
     $fullPath = Join-Path $root $file
@@ -71,10 +72,31 @@ foreach ($file in @($webView2WinForms, $webView2Core, $webView2LoaderX64, $webVi
     }
 }
 
+if (-not (Test-Path $fixedRuntimeManifest)) {
+    throw "Missing WebView2 fixed runtime manifest: $fixedRuntimeManifest"
+}
+
+$fixedRuntime = Get-Content $fixedRuntimeManifest | ConvertFrom-Json
+$fixedRuntimeX64 = $fixedRuntime | Where-Object { $_.arch -eq "x64" } | Select-Object -First 1
+$fixedRuntimeX86 = $fixedRuntime | Where-Object { $_.arch -eq "x86" } | Select-Object -First 1
+if (-not $fixedRuntimeX64 -or -not $fixedRuntimeX86) {
+    throw "Missing x64/x86 WebView2 fixed runtime manifest entries."
+}
+
+$fixedRuntimeCabX64 = Join-Path (Split-Path -Parent $fixedRuntimeManifest) $fixedRuntimeX64.fileName
+$fixedRuntimeCabX86 = Join-Path (Split-Path -Parent $fixedRuntimeManifest) $fixedRuntimeX86.fileName
+foreach ($file in @($fixedRuntimeCabX64, $fixedRuntimeCabX86)) {
+    if (-not (Test-Path $file)) {
+        throw "Missing WebView2 fixed runtime package: $file"
+    }
+}
+
 $resourceArgs += "/resource:$webView2WinForms,deps.Microsoft.Web.WebView2.WinForms.dll"
 $resourceArgs += "/resource:$webView2Core,deps.Microsoft.Web.WebView2.Core.dll"
 $resourceArgs += "/resource:$webView2LoaderX64,deps.x64.WebView2Loader.dll"
 $resourceArgs += "/resource:$webView2LoaderX86,deps.x86.WebView2Loader.dll"
+$resourceArgs += "/resource:$fixedRuntimeCabX64,deps.fixedruntime.x64.cab"
+$resourceArgs += "/resource:$fixedRuntimeCabX86,deps.fixedruntime.x86.cab"
 
 & $csc `
     /nologo `

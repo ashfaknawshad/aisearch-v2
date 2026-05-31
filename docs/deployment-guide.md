@@ -5,10 +5,11 @@ Complete guide for deploying both the standalone visualizer and Next.js applicat
 ## Table of Contents
 
 1. [Standalone Version (GitHub Pages)](#standalone-deployment)
-2. [Next.js Application](#nextjs-deployment)
-3. [Environment Configuration](#environment-configuration)
-4. [Database Setup](#database-setup)
-5. [Troubleshooting](#troubleshooting)
+2. [Windows Fully Portable EXE](#windows-fully-portable-exe)
+3. [Next.js Application](#nextjs-deployment)
+4. [Environment Configuration](#environment-configuration)
+5. [Database Setup](#database-setup)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -98,6 +99,29 @@ npx http-server -p 8000
 ```
 
 Visit `http://localhost:8000`
+
+---
+
+## Windows Fully Portable EXE
+
+Use this option for a download-and-run Windows app package that works offline.
+
+### Output File Name
+
+`release/AI Search Algorithm Visualizer Fully Portable.exe`
+
+### Build Command
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows-exe.ps1
+```
+
+### Portable Behavior
+
+- Runs on Windows 10/11.
+- No Python or Node.js installation required on target machines.
+- Includes bundled WebView2 fixed runtime (x64 and x86) for portability.
+- First launch can take longer while runtime files are unpacked.
 
 ---
 

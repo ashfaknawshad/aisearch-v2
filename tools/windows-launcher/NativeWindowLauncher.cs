@@ -18,7 +18,10 @@ namespace AISearchWindowsLauncher
 {
     internal static class NativeWindowProgram
     {
-        private const string AppTitle = "AI Search Algorithm Visualizer";
+        private const string AppTitle = "AI Search Algorithm Visualizer Fully Portable";
+        private const string FixedRuntimeVersion = "148.0.3967.96";
+
+        public static string BrowserExecutableFolder { get; private set; }
 
         [STAThread]
         private static void Main()
@@ -31,6 +34,7 @@ namespace AISearchWindowsLauncher
 
             try
             {
+                BrowserExecutableFolder = EnsureFixedRuntime();
                 Application.Run(new MainForm());
             }
             catch (Exception ex)
@@ -82,6 +86,134 @@ namespace AISearchWindowsLauncher
             SetDllDirectory(tempDir);
         }
 
+        public static string EnsureFixedRuntime()
+        {
+            var arch = Environment.Is64BitProcess ? "x64" : "x86";
+            var runtimeRoot = GetWritableRuntimeRoot(arch);
+            var marker = Path.Combine(runtimeRoot, ".ready");
+            var existingRuntime = FindRuntimeFolder(runtimeRoot);
+            if (File.Exists(marker) && existingRuntime != null)
+            {
+                return existingRuntime;
+            }
+
+            var cabPath = Path.Combine(runtimeRoot, "WebView2Runtime.cab");
+            var resourceName = "deps.fixedruntime." + arch + ".cab";
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+            {
+                if (stream == null)
+                {
+                    throw new InvalidOperationException("The embedded WebView2 runtime is missing.");
+                }
+
+                using (var file = File.Create(cabPath))
+                {
+                    stream.CopyTo(file);
+                }
+            }
+
+            var expand = new ProcessStartInfo
+            {
+                FileName = "expand.exe",
+                Arguments = "\"" + cabPath + "\" -F:* \"" + runtimeRoot + "\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            using (var process = Process.Start(expand))
+            {
+                if (process == null || !process.WaitForExit(300000) || process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException("Could not unpack the bundled WebView2 runtime.");
+                }
+            }
+
+            try { File.Delete(cabPath); } catch { }
+
+            var runtimeFolder = FindRuntimeFolder(runtimeRoot);
+            if (runtimeFolder == null)
+            {
+                throw new InvalidOperationException("The bundled WebView2 runtime was unpacked, but msedgewebview2.exe was not found.");
+            }
+
+            GrantWebView2RuntimeAccess(runtimeFolder);
+            File.WriteAllText(marker, DateTime.UtcNow.ToString("O"));
+            return runtimeFolder;
+        }
+
+        private static string GetWritableRuntimeRoot(string arch)
+        {
+            var suffix = Path.Combine("AISearchVisualizer", "FixedWebView2", FixedRuntimeVersion, arch);
+            var candidates = new[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                Path.GetTempPath()
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(candidate))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var root = Path.Combine(candidate, suffix);
+                    Directory.CreateDirectory(root);
+                    return root;
+                }
+                catch { }
+            }
+
+            throw new InvalidOperationException("Could not find a writable location for the bundled WebView2 runtime.");
+        }
+
+        private static string FindRuntimeFolder(string root)
+        {
+            if (!Directory.Exists(root))
+            {
+                return null;
+            }
+
+            var runtimeExe = Directory.GetFiles(root, "msedgewebview2.exe", SearchOption.AllDirectories).FirstOrDefault();
+            return runtimeExe == null ? null : Path.GetDirectoryName(runtimeExe);
+        }
+
+        private static void GrantWebView2RuntimeAccess(string runtimeFolder)
+        {
+            RunIcacls(runtimeFolder, "*S-1-15-2-2:(OI)(CI)(RX)");
+            RunIcacls(runtimeFolder, "*S-1-15-2-1:(OI)(CI)(RX)");
+        }
+
+        private static void RunIcacls(string runtimeFolder, string grant)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "icacls.exe",
+                    Arguments = "\"" + runtimeFolder + "\" /grant " + grant,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (var process = Process.Start(startInfo))
+                {
+                    if (process != null)
+                    {
+                        process.WaitForExit(15000);
+                    }
+                }
+            }
+            catch
+            {
+                // WebView2 can still work on many systems without this ACL update.
+            }
+        }
+
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern bool SetDllDirectory(string lpPathName);
     }
@@ -93,7 +225,7 @@ namespace AISearchWindowsLauncher
 
         public MainForm()
         {
-            Text = "AI Search Algorithm Visualizer";
+            Text = "AI Search Algorithm Visualizer Fully Portable";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1100, 720);
             Size = new Size(1400, 900);
@@ -113,7 +245,7 @@ namespace AISearchWindowsLauncher
         {
             var userDataFolder = Path.Combine(Path.GetTempPath(), "AISearchVisualizerWebView2", "UserData");
             Directory.CreateDirectory(userDataFolder);
-            var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+            var environment = await CoreWebView2Environment.CreateAsync(NativeWindowProgram.BrowserExecutableFolder, userDataFolder);
             await webView.EnsureCoreWebView2Async(environment);
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             webView.CoreWebView2.Settings.AreDevToolsEnabled = false;

@@ -41,6 +41,23 @@ Your code is already pushed to: https://github.com/ashfaknawshad/aisearch-v2
 - Algorithm-aware UI
 - Dark mode
 
+## Windows Fully Portable Build
+
+If you need a fully portable Windows app file, build:
+
+- `release/AI Search Algorithm Visualizer Fully Portable.exe`
+
+Build command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-windows-exe.ps1
+```
+
+Notes:
+- Designed for Windows 10/11.
+- Works offline.
+- No Python/Node dependency on target PCs.
+
 ## Troubleshooting
 
 If the site doesn't work:
