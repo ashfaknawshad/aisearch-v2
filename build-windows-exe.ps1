@@ -5,7 +5,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$launcher = Join-Path $root "tools\windows-launcher\Launcher.cs"
 $output = Join-Path $root $OutputPath
 $outputDir = Split-Path -Parent $output
 
@@ -39,6 +38,12 @@ $files = @(
     "vendor\lucide.min.js"
 )
 
+$webView2Root = Join-Path $root "tools\webview2"
+$webView2WinForms = Join-Path $webView2Root "Microsoft.Web.WebView2.WinForms.dll"
+$webView2Core = Join-Path $webView2Root "Microsoft.Web.WebView2.Core.dll"
+$webView2LoaderX64 = Join-Path $webView2Root "x64\WebView2Loader.dll"
+$webView2LoaderX86 = Join-Path $webView2Root "x86\WebView2Loader.dll"
+
 foreach ($file in $files) {
     $fullPath = Join-Path $root $file
     if (-not (Test-Path $fullPath)) {
@@ -54,6 +59,23 @@ $resourceArgs = foreach ($file in $files) {
     "/resource:$fullPath,$resourceName"
 }
 
+$referenceArgs = @(
+    "/reference:$webView2WinForms",
+    "/reference:$webView2Core"
+)
+$sourceFile = Join-Path $root "tools\windows-launcher\NativeWindowLauncher.cs"
+
+foreach ($file in @($webView2WinForms, $webView2Core, $webView2LoaderX64, $webView2LoaderX86)) {
+    if (-not (Test-Path $file)) {
+        throw "Missing WebView2 build file: $file"
+    }
+}
+
+$resourceArgs += "/resource:$webView2WinForms,deps.Microsoft.Web.WebView2.WinForms.dll"
+$resourceArgs += "/resource:$webView2Core,deps.Microsoft.Web.WebView2.Core.dll"
+$resourceArgs += "/resource:$webView2LoaderX64,deps.x64.WebView2Loader.dll"
+$resourceArgs += "/resource:$webView2LoaderX86,deps.x86.WebView2Loader.dll"
+
 & $csc `
     /nologo `
     /target:winexe `
@@ -63,7 +85,8 @@ $resourceArgs = foreach ($file in $files) {
     /reference:System.dll `
     /reference:System.Drawing.dll `
     /reference:System.Windows.Forms.dll `
+    $referenceArgs `
     $resourceArgs `
-    $launcher
+    $sourceFile
 
 Write-Host "Created $output"

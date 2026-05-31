@@ -77,10 +77,16 @@ coverage/
 *.min.css
 dist/
 build/
+release/*.WebView2/
+release/AI Search Algorithm Visualizer Native.exe
 
 # Keep browser libraries needed for offline Windows executable builds
 !vendor/
 !vendor/*.js
+
+# NuGet download/extract cache, trimmed down after WebView2 files are copied
+tools/webview2/*.nupkg
+tools/webview2/package/
 
 # Temporary files
 tmp/
